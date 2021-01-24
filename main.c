@@ -90,88 +90,47 @@ static uint32_t rnd(uint32_t a, uint32_t b)
 // TODO: pause with P.
 
 typedef enum {
-    KEY_W, KEY_A, KEY_S, KEY_D,
-    KEY_UP, KEY_LEFT, KEY_DOWN, KEY_RIGHT,
-    KEY_SPACE = 0,
-} InputKey;
-
-typedef enum {
     LR_NEUTRAL, LR_LEFT, LR_RIGHT
 } LeftRight;
 
 // This struct keeps track of the "joystick" state.
-// The tricky bit is that each action has multiple hotkeys.
 // If both LEFT and RIGHT a pressed at the same time, the most recent one wins.
 static struct {
     int isPressingJump;
+    int isPressingLeft;
+    int isPressingRight;
     LeftRight horizDirection;
-    int jumpCount;
-    int leftCount;
-    int rightCount;
-    bool _isPressingKey[KEY_SPACE+1];
 } K;
 
 static void init_input()
 {
-    K.isPressingJump = false;
+    K.isPressingJump  = false;
+    K.isPressingLeft  = false;
+    K.isPressingRight = false;
     K.horizDirection = LR_NEUTRAL;
-    K.jumpCount = 0;
-    K.leftCount = 0;
-    K.rightCount = 0;
-    for (int i=0; i <= KEY_SPACE; i++) {
-        K._isPressingKey[i] = false;
-    }
-}
-
-static int translateKey(const SDL_Keycode sym)
-{
-    switch (sym) {
-        case SDLK_w:     return KEY_W;
-        case SDLK_a:     return KEY_A;
-        case SDLK_s:     return KEY_S;
-        case SDLK_d:     return KEY_D;
-        case SDLK_UP:    return KEY_UP;
-        case SDLK_LEFT:  return KEY_LEFT;
-        case SDLK_DOWN:  return KEY_DOWN;
-        case SDLK_RIGHT: return KEY_RIGHT;
-        case SDLK_SPACE: return KEY_SPACE;
-        default:         return -1; // Ignore this key
-    }
 }
 
 static void handleKeyDown(const SDL_KeyboardEvent *e)
 {
-    SDL_Keycode sym = e->keysym.sym;
-    int k = translateKey(sym);
-    switch (sym) {
+    switch (e->keysym.sym) {
         case SDLK_UP:
         case SDLK_DOWN:
         case SDLK_w:
         case SDLK_s:
         case SDLK_SPACE:
-            if (!K._isPressingKey[k]) {
-                K._isPressingKey[k] = true;
-                K.isPressingJump = true;
-                K.jumpCount++;
-            }
+            K.isPressingJump = true;
             break;
 
         case SDLK_LEFT:
         case SDLK_a:
-            if (!K._isPressingKey[k]) {
-                K._isPressingKey[k] = true;
-                K.horizDirection = LR_LEFT;
-                K.leftCount++;
-            }
+            K.isPressingLeft = true;
+            K.horizDirection = LR_LEFT;
             break;
 
         case SDLK_RIGHT:
         case SDLK_d:
-            if (!K._isPressingKey[k]) {
-                K._isPressingKey[k] = true;
-                K.horizDirection = LR_RIGHT;
-                K.rightCount++;
-            }
+            K.isPressingRight = true;
+            K.horizDirection  = LR_RIGHT;
             break;
 
         default:
@@ -181,41 +140,25 @@ static void handleKeyDown(const SDL_KeyboardEvent *e)
 
 static void handleKeyUp(const SDL_KeyboardEvent *e)
 {
-    SDL_Keycode sym = e->keysym.sym;
-    int k = translateKey(sym);
-    switch (sym) {
+    switch (e->keysym.sym) {
         case SDLK_SPACE:
         case SDLK_UP:
         case SDLK_DOWN:
         case SDLK_w:
         case SDLK_s:
-            if (K._isPressingKey[k]) {
-                K.jumpCount--;
-                K.isPressingJump = (K.jumpCount > 0);
-                K._isPressingKey[k] = false;
-            }
+            K.isPressingJump = false;
             break;
 
         case SDLK_LEFT:
         case SDLK_a:
-            if (K._isPressingKey[k]) {
-                K.leftCount--;
-                K.horizDirection = (
-                    (K.leftCount > 0) ? LR_LEFT :
-                    (K.rightCount > 0) ? LR_RIGHT : LR_NEUTRAL);
-                K._isPressingKey[k] = false;
-            }
+            K.isPressingLeft = false;
+            K.horizDirection = (K.isPressingRight ? LR_RIGHT : LR_NEUTRAL);
             break;
 
         case SDLK_RIGHT:
         case SDLK_d:
-            if (K._isPressingKey[k]) {
-                K.rightCount--;
-                K.horizDirection = (
-                    (K.rightCount > 0) ? LR_RIGHT :
-                    (K.leftCount > 0) ? LR_LEFT : LR_NEUTRAL);
-                K._isPressingKey[k] = false;
-            }
+            K.isPressingRight = false;
+            K.horizDirection  = (K.isPressingLeft ? LR_LEFT : LR_NEUTRAL);
             break;
 
         default:
