@@ -89,6 +89,37 @@ static uint32_t rnd(uint32_t a, uint32_t b)
 // TODO: quit with Shift+Q
 // TODO: pause with P.
 
+
+typedef enum {
+    INPUT_NOTHING = 0,
+    INPUT_JUMP,
+    INPUT_LEFT,
+    INPUT_RIGHT,
+} Action;
+
+static Action actionForKeysym(SDL_Keysym k)
+{
+    switch (k.sym) {
+        case SDLK_UP:
+        case SDLK_DOWN:
+        case SDLK_w:
+        case SDLK_s:
+        case SDLK_SPACE:
+            return INPUT_JUMP;
+
+        case SDLK_LEFT:
+        case SDLK_a:
+            return INPUT_LEFT;
+
+        case SDLK_RIGHT:
+        case SDLK_d:
+            return INPUT_RIGHT;
+
+        default:
+            return INPUT_NOTHING;
+    }
+}
+
 typedef enum {
     LR_NEUTRAL, LR_LEFT, LR_RIGHT
 } LeftRight;
@@ -112,56 +143,44 @@ static void init_input()
 
 static void handleKeyDown(const SDL_KeyboardEvent *e)
 {
-    switch (e->keysym.sym) {
-        case SDLK_UP:
-        case SDLK_DOWN:
-        case SDLK_w:
-        case SDLK_s:
-        case SDLK_SPACE:
+    switch (actionForKeysym(e->keysym)) {
+        case INPUT_JUMP:
             K.isPressingJump = true;
             break;
 
-        case SDLK_LEFT:
-        case SDLK_a:
+        case INPUT_LEFT:
             K.isPressingLeft = true;
             K.horizDirection = LR_LEFT;
             break;
 
-        case SDLK_RIGHT:
-        case SDLK_d:
+        case INPUT_RIGHT:
             K.isPressingRight = true;
             K.horizDirection  = LR_RIGHT;
             break;
 
-        default:
+        case INPUT_NOTHING:
             break;
     }
 }
 
 static void handleKeyUp(const SDL_KeyboardEvent *e)
 {
-    switch (e->keysym.sym) {
-        case SDLK_SPACE:
-        case SDLK_UP:
-        case SDLK_DOWN:
-        case SDLK_w:
-        case SDLK_s:
+    switch (actionForKeysym(e->keysym)) {
+        case INPUT_JUMP:
             K.isPressingJump = false;
             break;
 
-        case SDLK_LEFT:
-        case SDLK_a:
+        case INPUT_LEFT:
             K.isPressingLeft = false;
             K.horizDirection = (K.isPressingRight ? LR_RIGHT : LR_NEUTRAL);
             break;
 
-        case SDLK_RIGHT:
-        case SDLK_d:
+        case INPUT_RIGHT:
             K.isPressingRight = false;
             K.horizDirection  = (K.isPressingLeft ? LR_LEFT : LR_NEUTRAL);
             break;
 
-        default:
+        case INPUT_NOTHING:
             break;
     }
 }
