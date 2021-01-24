@@ -1,6 +1,7 @@
 #include <SDL.h>
 #include <SDL_ttf.h>
 
+#include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,6 +19,13 @@ static int min(int x, int y)
 static int max(int x, int y)
 {
     return (x > y ? x : y);
+}
+
+static int mod(int n, int m)
+{
+    assert(m > 0);
+    int r = n % m;
+    return (r >= 0 ? r : r + m);
 }
 
 //
@@ -171,7 +179,7 @@ static struct {
 
 static Floor *get_floor(int n)
 {
-    return &G.floors[(n + FIELD_H) % FIELD_H]; // TODO: Use a smarter mod function
+    return &G.floors[mod(n, FIELD_H)];
 }
 
 static void generate_floor()
@@ -184,14 +192,13 @@ static void generate_floor()
     // tiles to the left and to the right of the origin, totaling 5-9 tiles.
     int n = G.next_floor++;
     Floor *floor = get_floor(n);
-    printf("GENERATE %d\n", n);
     if (n % 250 == 0) {
         floor->left  = 1;
         floor->right = 30;
     } else if (n % 5 == 0) {
         int sign = (rnd(0,1) ? +1 : -1);
         int magnitude = rnd(5,9);
-        G.fpos = (G.fpos + sign*magnitude + 22) % 22;
+        G.fpos = mod(G.fpos + sign*magnitude, 22);
         floor->left  = G.fpos+5 - rnd(2,4);
         floor->right = G.fpos+5 + rnd(2,4);
     } else {
@@ -508,7 +515,7 @@ int main()
             }
 
             for (int y = 0; y < 24; y++) {
-                const Floor *fl = &G.floors[(G.scrollOffset - y + FIELD_H) % FIELD_H];
+                const Floor *fl = &G.floors[mod(G.scrollOffset - y, FIELD_H)];
                 for (int x = 1; x <= 30; x++) {
                     const SDL_Rect *sprite = (
                             fl->left <= x && x <= fl->right) ? &floorSprite : &skySprite;
