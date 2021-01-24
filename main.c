@@ -517,6 +517,8 @@ int main()
 
     while (1) {
 
+        uint32_t frame_start_time = SDL_GetTicks();
+
         //
         // Respond to events
         //
@@ -618,7 +620,13 @@ int main()
         // Wait
         //
 
-        SDL_Delay(25); // 40 FPS
+        // SDL_Delay isn't super accurate because it is at the mercy of the OS scheduler.
+        // Nevertheless, the game feels OK. TODO consider rendering at 60 FPS.
+        uint32_t time_spent = SDL_GetTicks() - frame_start_time;
+        uint32_t FRAME_DURATION = 25; // 40 FPS
+        if (time_spent < FRAME_DURATION) {
+            SDL_Delay(FRAME_DURATION - time_spent);
+        }
     }
 
 quit:
