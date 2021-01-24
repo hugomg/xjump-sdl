@@ -41,7 +41,7 @@ static void panic(const char *what, const char *fullError)
 }
 
 //
-// Random Number Generator 
+// Random Number Generator
 // -----------------------
 //
 // References:
@@ -59,7 +59,7 @@ static void pcg32_init(uint64_t seed, uint64_t seq)
 
 static uint32_t pcg32_next()
 {
-    pcgState =  pcgState * 6364136223846793005ULL + pcgSeq;
+    pcgState = pcgState * 6364136223846793005ULL + pcgSeq;
     uint32_t xorshifted = ((pcgState >> 18u) ^ pcgState) >> 27u;
     uint32_t rot = pcgState >> 59u;
     return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
@@ -201,14 +201,13 @@ enum GameState {
     STATE_HIGHSCORES,
 };
 
-
 typedef struct {
     int left;
     int right;
 } Floor;
 
 static struct {
-    
+
     int score;
 
     // Physics
@@ -259,7 +258,7 @@ static void generate_floor()
         floor->left  = G.fpos+5 - rnd(2,4);
         floor->right = G.fpos+5 + rnd(2,4);
     } else {
-        floor->left = -1;
+        floor->left  = -1;
         floor->right = -1;
     }
 }
@@ -267,13 +266,13 @@ static void generate_floor()
 static void init_game()
 {
     G.score = 0;
-    
+
     G.x    = (FIELD_W/2)*S - R/2;
     G.y    = (FIELD_H-4)*S - R;
     G.vx   = 0;
     G.vy   = 0;
     G.jump = 0;
-    
+
     G.isStanding    = true;
     G.isFacingRight = false;
     G.isIdleVariant = false;
@@ -283,7 +282,7 @@ static void init_game()
     G.scrollOffset = 20;
     G.scrollCount  = 0;
     G.scrollSpeed  = 200;
-    
+
     G.fpos = rnd(0,21);
     G.next_floor = -3;
     for (int i=0; i < FIELD_H; i++) {
@@ -297,7 +296,6 @@ static void scroll()
     G.scrollOffset += 1;
     G.y += S;
 }
-
 
 static bool isStanding()
 {
@@ -315,7 +313,6 @@ static bool isStanding()
     return (fl->left*S - 24 < G.x && G.x < fl->right*S + 8);
 }
 
-
 enum Alive {
     LIVE,
     DEAD,
@@ -327,7 +324,7 @@ static int update_game()
         if (G.scrollSpeed < 5000) {
             G.scrollSpeed++;
         }
-    
+
         G.scrollCount += G.scrollSpeed;
         if (G.scrollCount > 20000) {
             G.scrollCount -= 20000;
@@ -338,13 +335,11 @@ static int update_game()
     G.x += G.vx / 2;
     G.y += G.vy;
 
-    // 
-
     if (G.y >= S*FIELD_H) {
-        printf("DEAD!\n");
+        printf("DEAD!\n"); // TODO: add game over screen & delete this
         return DEAD;
     }
-    
+
     if (G.y < 80) {
         G.scrollCount = 0;
         scroll();
@@ -354,12 +349,12 @@ static int update_game()
     // TODO: use coordinates at the center of the sprite
     // to make this part of the code more symmetric.
 
-    if (G.x < S && G.vx <= 0){
+    if (G.x < S && G.vx <= 0) {
         G.x  = 16;
         G.vx = -G.vx/2;
     }
-    
-    if (G.x > 29*S && G.vx >= 0){
+
+    if (G.x > 29*S && G.vx >= 0) {
         G.x  = 29*S;
         G.vx = -G.vx/2;
     }
@@ -373,8 +368,8 @@ static int update_game()
         if (n > G.score) {
             G.score = n;
         }
-        
-        if (++G.idleCount >= 5){
+
+        if (++G.idleCount >= 5) {
           G.isIdleVariant = !G.isIdleVariant;
           G.idleCount = 0;
         }
@@ -386,7 +381,7 @@ static int update_game()
           G.hasStarted = true;
         }
     }
-    
+
     int accelx = (G.isStanding ? 3 : 2);
     switch (K.horizDirection) {
         case LR_LEFT:
@@ -441,8 +436,8 @@ static const SDL_Rect digitSprites[10] = {
     { 9*FW, FH, FW, FH }
 };
 static const SDL_Rect titleSprite    = {   0, 2*FH, 330, 44 };
-//static const SDL_Rect gameOverSprite = { 331, 2*FH, 150, 44 };
-//static const SDL_Rect pauseSprite    = { 482, 2*FH,  90, 44 };
+//static const SDL_Rect gameOverSprite = { 331, 2*FH, 150, 44 }; // TODO
+//static const SDL_Rect pauseSprite    = { 482, 2*FH,  90, 44 }; // TODO
 
 #define SCORE_NDIGITS 10
 #define SCORE_WIDTH (scoreLabelSprite.w + SCORE_NDIGITS*FW)
@@ -475,7 +470,7 @@ int main()
     {
         int64_t seed[2];
         ssize_t nread = getrandom(seed, sizeof(seed), GRND_NONBLOCK);
-        if (nread == -1) panic("Could not initialize RNG", NULL);
+        if (nread == -1) panic("Could not initialize RNG", NULL); // TODO strerror
         pcg32_init(seed[0], seed[1]);
     }
 
@@ -483,10 +478,10 @@ int main()
     if (0 != TTF_Init()) panic("Could not initialize SDL_ttf", TTF_GetError());
 
     SDL_Surface *uiSprites = SDL_LoadBMP("images/ui-sprites.bmp");
-    if (!uiSprites) { panic("Could not load UI sprites", SDL_GetError()); }
+    if (!uiSprites) panic("Could not load UI sprites", SDL_GetError());
 
     SDL_Surface *gameSprites = SDL_LoadBMP("images/theme-jumpnbump.bmp");
-    if (!gameSprites) { panic("Could not load game sprites", SDL_GetError()); }
+    if (!gameSprites) panic("Could not load game sprites", SDL_GetError());
 
     SDL_Window *window = SDL_CreateWindow(
         /*title*/ "xjump",
@@ -494,12 +489,12 @@ int main()
         /*y*/ SDL_WINDOWPOS_UNDEFINED,
         /*w*/ WINDOW_W,
         /*h*/ WINDOW_H,
-        /*flags*/ SDL_WINDOW_SHOWN); // TODO: | SDL_WINDOW_RESIZABLE
+        /*flags*/ SDL_WINDOW_SHOWN); // TODO: SDL_WINDOW_RESIZABLE
     if (!window) panic("Could not create window", SDL_GetError());
 
     SDL_Surface *windowSurface = SDL_GetWindowSurface(window);
     if (!windowSurface) panic("Could not get the window surface", SDL_GetError());
-    
+
     SDL_Rect titleDst       = { (WINDOW_W - titleSprite.w)/2, 15, 0, 0 };
     SDL_Rect copyrightDst   = { (WINDOW_W - copyrightSprite.w)/2, WINDOW_H - 32, 0, 0 };
     SDL_Rect scoreLabelDst  = { (WINDOW_W - SCORE_WIDTH)/2, 100, 0, 0 };
@@ -508,7 +503,7 @@ int main()
     init_input();
     init_game();
     int live = LIVE;
-    
+
     while (1) {
 
         //
@@ -516,7 +511,7 @@ int main()
         //
 
         SDL_Event e;
-        while (SDL_PollEvent(&e)){
+        while (SDL_PollEvent(&e)) {
             switch (e.type) {
                 case SDL_QUIT:
                     goto quit;
@@ -537,7 +532,7 @@ int main()
         //
         // Update Game State
         //
-        
+
         if (live == LIVE) {
             live = update_game();
         }
@@ -551,15 +546,15 @@ int main()
         SDL_BlitSurface(uiSprites, &scoreLabelSprite, windowSurface, &scoreLabelDst);
         SDL_BlitSurface(uiSprites, &copyrightSprite,  windowSurface, &copyrightDst);
 
-        { 
+        {
             int digits[SCORE_NDIGITS];
-            
+
             long int s = G.score;
             for (int i = SCORE_NDIGITS-1; i >= 0; i--) {
                 digits[i] = s % 10;
                 s = s / 10;
             }
-            
+
             int x = scoreLabelDst.x + scoreLabelSprite.w;
             for (int i = 0; i < SCORE_NDIGITS; i++) {
                 int d = digits[i];
@@ -571,7 +566,7 @@ int main()
 
         SDL_Rect gameRect = { 16, 160, FIELD_W*S, FIELD_H*S };
         SDL_SetClipRect(windowSurface, &gameRect);
-        { 
+        {
             for (int y = 0; y < 24; y++) {
                 SDL_Rect spriteDst = { gameRect.x + 0*S, gameRect.y + y*S, 0, 0 };
                 SDL_BlitSurface(gameSprites, &LWallSprite, windowSurface, &spriteDst);
@@ -601,7 +596,6 @@ int main()
             SDL_BlitSurface(gameSprites, &heroSprite[sprite_index], windowSurface, &heroDst);
         }
         SDL_SetClipRect(windowSurface, NULL);
-        
 
         SDL_UpdateWindowSurface(window);
 
@@ -614,7 +608,7 @@ int main()
 
 quit:
 
-    // Cleanup:
+    // Cleanup: //TODO do I need to free the window surface?
     SDL_FreeSurface(uiSprites);
     SDL_FreeSurface(gameSprites);
     SDL_DestroyWindow(window);
