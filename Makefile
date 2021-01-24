@@ -15,6 +15,7 @@ main.o: main.c
 #
 # Phony targets
 #
+# TODO: install
 
 clean:
 	rm -rf ./*.o xjump
