@@ -92,13 +92,17 @@ static uint32_t rnd(uint32_t a, uint32_t b)
 
 
 typedef enum {
-    INPUT_NOTHING = 0,
     INPUT_JUMP,
     INPUT_LEFT,
     INPUT_RIGHT,
-} Action;
+    INPUT_QUIT,
+    INPUT_PAUSE,
+    INPUT_NOTHING,
+} Input;
 
-static Action actionForKeysym(SDL_Keysym k)
+#define N_INPUT (INPUT_NOTHING+1)
+
+static Input translateHotkey(SDL_Keysym k)
 {
     switch (k.sym) {
         case SDLK_UP:
@@ -116,72 +120,76 @@ static Action actionForKeysym(SDL_Keysym k)
         case SDLK_d:
             return INPUT_RIGHT;
 
+        case SDLK_q:
+            if (k.mod & KMOD_SHIFT) {
+                return INPUT_QUIT;
+            } else {
+                return INPUT_NOTHING;
+            }
+
+        case SDLK_p:
+            return INPUT_PAUSE;
+
         default:
             return INPUT_NOTHING;
     }
 }
 
 typedef enum {
-    LR_NEUTRAL, LR_LEFT, LR_RIGHT
+    LR_NEUTRAL,
+    LR_LEFT,
+    LR_RIGHT
 } LeftRight;
 
 // This struct keeps track of the "joystick" state.
 // If both LEFT and RIGHT a pressed at the same time, the most recent one wins.
 static struct {
-    int isPressingJump;
-    int isPressingLeft;
-    int isPressingRight;
     LeftRight horizDirection;
+    bool isPressing[N_INPUT];
 } K;
 
 static void init_input()
 {
-    K.isPressingJump  = false;
-    K.isPressingLeft  = false;
-    K.isPressingRight = false;
     K.horizDirection = LR_NEUTRAL;
+    for (int i=0; i < N_INPUT; i++) {
+        K.isPressing[i] = false;
+    }
 }
 
 static void handleKeyDown(const SDL_KeyboardEvent *e)
 {
-    switch (actionForKeysym(e->keysym)) {
-        case INPUT_JUMP:
-            K.isPressingJump = true;
-            break;
+    int input = translateHotkey(e->keysym);
+    K.isPressing[input] = true;
 
+    switch (input) {
         case INPUT_LEFT:
-            K.isPressingLeft = true;
             K.horizDirection = LR_LEFT;
             break;
 
         case INPUT_RIGHT:
-            K.isPressingRight = true;
-            K.horizDirection  = LR_RIGHT;
+            K.horizDirection = LR_RIGHT;
             break;
 
-        case INPUT_NOTHING:
+        default:
             break;
     }
 }
 
 static void handleKeyUp(const SDL_KeyboardEvent *e)
 {
-    switch (actionForKeysym(e->keysym)) {
-        case INPUT_JUMP:
-            K.isPressingJump = false;
-            break;
+    int input = translateHotkey(e->keysym);
+    K.isPressing[input] = false;
 
+    switch (input) {
         case INPUT_LEFT:
-            K.isPressingLeft = false;
-            K.horizDirection = (K.isPressingRight ? LR_RIGHT : LR_NEUTRAL);
+            K.horizDirection = (K.isPressing[INPUT_RIGHT] ? LR_RIGHT : LR_NEUTRAL);
             break;
 
         case INPUT_RIGHT:
-            K.isPressingRight = false;
-            K.horizDirection  = (K.isPressingLeft ? LR_LEFT : LR_NEUTRAL);
+            K.horizDirection  = (K.isPressing[INPUT_LEFT] ? LR_LEFT : LR_NEUTRAL);
             break;
 
-        case INPUT_NOTHING:
+        default:
             break;
     }
 }
@@ -375,7 +383,7 @@ static int update_game()
           G.idleCount = 0;
         }
 
-        if (K.isPressingJump) {
+        if (K.isPressing[INPUT_JUMP]) {
           G.jump = abs(G.vx)/4+7;
           G.vy = -G.jump/2-12;
           G.isStanding = true;
@@ -405,7 +413,7 @@ static int update_game()
     if (!G.isStanding) {
         if (G.jump > 0) {
             G.vy   = -G.jump/2 - 12;
-            G.jump = (K.isPressingJump ? G.jump-1 : 0);
+            G.jump = (K.isPressing[INPUT_JUMP] ? G.jump-1 : 0);
         } else {
             G.vy = min(G.vy + 2, 16);
             G.jump = 0;
@@ -533,6 +541,10 @@ int main()
         //
         // Update Game State
         //
+
+        if (K.isPressing[INPUT_QUIT]) {
+            goto quit;
+        }
 
         if (live == LIVE) {
             live = update_game();
