@@ -89,17 +89,41 @@ static uint32_t rnd(uint32_t a, uint32_t b)
 // TODO: pause with P.
 
 enum InputKey {
-    KEY_SPACE = 0,
     KEY_W, KEY_A, KEY_S, KEY_D,
     KEY_UP, KEY_LEFT, KEY_DOWN, KEY_RIGHT,
+    KEY_SPACE = 0,
 };
 
-static int keyIsPressed[KEY_RIGHT + 1];
+// This struct keeps track of the "joystick" state.
+// The tricky bit is that each action has multiple hotkeys.
+// The LEFT and RIGHT flags are mutually exclusive. If both keys are being
+// pressed at the same time then the most recent one wins.
+static struct {
+    int isPressingJump;
+    int isPressingLeft;
+    int isPressingRight;
+    int jumpCount;
+    int leftCount;
+    int rightCount;
+    bool _isPressingKey[KEY_SPACE+1];
+} K;
 
-static int translateKey(const SDL_Keysym k)
+static void init_input()
 {
-    switch (k.sym) {
-        case SDLK_SPACE: return KEY_SPACE;
+    K.isPressingJump  = false;
+    K.isPressingLeft  = false;
+    K.isPressingRight = false;
+    K.jumpCount = 0;
+    K.leftCount = 0;
+    K.rightCount = 0;
+    for (int i=0; i <= KEY_SPACE; i++) {
+        K._isPressingKey[i] = false;
+    }
+}
+
+static int translateKey(const SDL_Keycode sym)
+{
+    switch (sym) {
         case SDLK_w:     return KEY_W;
         case SDLK_a:     return KEY_A;
         case SDLK_s:     return KEY_S;
@@ -108,25 +132,95 @@ static int translateKey(const SDL_Keysym k)
         case SDLK_LEFT:  return KEY_LEFT;
         case SDLK_DOWN:  return KEY_DOWN;
         case SDLK_RIGHT: return KEY_RIGHT;
+        case SDLK_SPACE: return KEY_SPACE;
     }
     return -1; // Ignore this key
 }
 
-static void handleKeyEvent(const SDL_KeyboardEvent *e, int isDown)
+
+static void handleKeyDown(const SDL_KeyboardEvent *e)
 {
-    int key = translateKey(e->keysym);
-    if (key >= 0) {
-        keyIsPressed[key] = isDown;
+    SDL_Keycode sym = e->keysym.sym;
+    int k = translateKey(sym);
+    switch (sym) {
+        case SDLK_UP:
+        case SDLK_DOWN:
+        case SDLK_w:
+        case SDLK_s:
+        case SDLK_SPACE:
+            if (!K._isPressingKey[k]) {
+                K._isPressingKey[k] = true;
+                K.isPressingJump = true;
+                K.jumpCount++;
+            }
+            break;
+
+        case SDLK_LEFT:
+        case SDLK_a:
+            if (!K._isPressingKey[k]) {
+                K._isPressingKey[k] = true;
+                K.isPressingLeft  = true;
+                K.isPressingRight = false;
+                K.leftCount++;
+            }
+            break;
+
+        case SDLK_RIGHT:
+        case SDLK_d:
+            if (!K._isPressingKey[k]) {
+                K._isPressingKey[k] = true;
+                K.isPressingLeft  = false;
+                K.isPressingRight = true;
+                K.rightCount++;
+            }
+            break;
+
+        default:
+            break;
     }
 }
 
-static int isPressingLeft()  { return keyIsPressed[KEY_LEFT]  || keyIsPressed[KEY_A]; }
+static void handleKeyUp(const SDL_KeyboardEvent *e)
+{
+    SDL_Keycode sym = e->keysym.sym;
+    int k = translateKey(sym);
+    switch (sym) {
+        case SDLK_SPACE:
+        case SDLK_UP:
+        case SDLK_DOWN:
+        case SDLK_w:
+        case SDLK_s:
+            if (K._isPressingKey[k]) {
+                K.jumpCount--;
+                K.isPressingJump = (K.jumpCount > 0);
+                K._isPressingKey[k] = false;
+            }
+            break;
 
-static int isPressingRight() { return keyIsPressed[KEY_RIGHT] || keyIsPressed[KEY_D]; }
+        case SDLK_LEFT:
+        case SDLK_a:
+            if (K._isPressingKey[k]) {
+                K.leftCount--;
+                K.isPressingLeft  = (K.leftCount > 0);
+                K.isPressingRight = !K.isPressingLeft && (K.rightCount > 0);
+                K._isPressingKey[k] = false;
+            }
+            break;
 
-static int isPressingJump()  { return keyIsPressed[KEY_SPACE]
-                                   || keyIsPressed[KEY_UP]    || keyIsPressed[KEY_W]
-                                   || keyIsPressed[KEY_DOWN]  || keyIsPressed[KEY_S]; }
+        case SDLK_RIGHT:
+        case SDLK_d:
+            if (K._isPressingKey[k]) {
+                K.rightCount--;
+                K.isPressingRight = (K.rightCount > 0);
+                K.isPressingLeft  = !K.isPressingRight && (K.leftCount > 0);
+                K._isPressingKey[k] = false;
+            }
+            break;
+
+        default:
+            break;
+    }
+}
 
 //
 // Game Logic
@@ -322,7 +416,7 @@ static int update_game()
           G.idleCount = 0;
         }
 
-        if (isPressingJump()) {
+        if (K.isPressingJump) {
           G.jump = abs(G.vx)/4+7;
           G.vy = -G.jump/2-12;
           G.isStanding = true;
@@ -333,10 +427,10 @@ static int update_game()
     // TODO: make the game more forgiving if
     // you press both L and R at the same time
     int accelx = (G.isStanding ? 3 : 2);
-    if (isPressingLeft()) {
+    if (K.isPressingLeft) {
         G.vx = max(G.vx - accelx, -32);
         G.isFacingRight = false;
-    } else if (isPressingRight()) {
+    } else if (K.isPressingRight) {
         G.vx = min(G.vx + accelx, 32);
         G.isFacingRight = true;
     } else if (G.isStanding) {
@@ -348,7 +442,7 @@ static int update_game()
     if (!G.isStanding) {
         if (G.jump > 0) {
             G.vy   = -G.jump/2 - 12;
-            G.jump = (isPressingJump() ? G.jump-1 : 0);
+            G.jump = (K.isPressingJump ? G.jump-1 : 0);
         } else {
             G.vy = min(G.vy + 2, 16);
             G.jump = 0;
@@ -414,9 +508,6 @@ int main()
     // TODO: Seed the RNG
     //pcg32_seed()
 
-    // TODO: delete these
-    (void) isPressingLeft();
-
     if (0 != SDL_Init(SDL_INIT_VIDEO)) panic("Could not initialize SDL", SDL_GetError());
     if (0 != TTF_Init()) panic("Could not initialize SDL_ttf", TTF_GetError());
 
@@ -443,6 +534,7 @@ int main()
     SDL_Rect scoreLabelDst  = { (WINDOW_W - SCORE_WIDTH)/2, 100, 0, 0 };
     uint32_t backgroundColor = SDL_MapRGB(windowSurface->format, 0x00, 0x00, 0x00);
 
+    init_input();
     init_game();
     int live = LIVE;
     
@@ -459,11 +551,11 @@ int main()
                     goto quit;
 
                 case SDL_KEYDOWN:
-                    handleKeyEvent(&e.key, 1);
+                    handleKeyDown(&e.key);
                     break;
 
                 case SDL_KEYUP:
-                    handleKeyEvent(&e.key, 0);
+                    handleKeyUp(&e.key);
                     break;
 
                 default:
