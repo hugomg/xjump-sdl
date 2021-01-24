@@ -89,20 +89,22 @@ static uint32_t rnd(uint32_t a, uint32_t b)
 // TODO: quit with Shift+Q
 // TODO: pause with P.
 
-enum InputKey {
+typedef enum {
     KEY_W, KEY_A, KEY_S, KEY_D,
     KEY_UP, KEY_LEFT, KEY_DOWN, KEY_RIGHT,
     KEY_SPACE = 0,
-};
+} InputKey;
+
+typedef enum {
+    LR_NEUTRAL, LR_LEFT, LR_RIGHT
+} LeftRight;
 
 // This struct keeps track of the "joystick" state.
 // The tricky bit is that each action has multiple hotkeys.
-// The LEFT and RIGHT flags are mutually exclusive. If both keys are being
-// pressed at the same time then the most recent one wins.
+// If both LEFT and RIGHT a pressed at the same time, the most recent one wins.
 static struct {
     int isPressingJump;
-    int isPressingLeft;
-    int isPressingRight;
+    LeftRight horizDirection;
     int jumpCount;
     int leftCount;
     int rightCount;
@@ -111,9 +113,8 @@ static struct {
 
 static void init_input()
 {
-    K.isPressingJump  = false;
-    K.isPressingLeft  = false;
-    K.isPressingRight = false;
+    K.isPressingJump = false;
+    K.horizDirection = LR_NEUTRAL;
     K.jumpCount = 0;
     K.leftCount = 0;
     K.rightCount = 0;
@@ -134,10 +135,9 @@ static int translateKey(const SDL_Keycode sym)
         case SDLK_DOWN:  return KEY_DOWN;
         case SDLK_RIGHT: return KEY_RIGHT;
         case SDLK_SPACE: return KEY_SPACE;
+        default:         return -1; // Ignore this key
     }
-    return -1; // Ignore this key
 }
-
 
 static void handleKeyDown(const SDL_KeyboardEvent *e)
 {
@@ -160,8 +160,7 @@ static void handleKeyDown(const SDL_KeyboardEvent *e)
         case SDLK_a:
             if (!K._isPressingKey[k]) {
                 K._isPressingKey[k] = true;
-                K.isPressingLeft  = true;
-                K.isPressingRight = false;
+                K.horizDirection = LR_LEFT;
                 K.leftCount++;
             }
             break;
@@ -170,8 +169,7 @@ static void handleKeyDown(const SDL_KeyboardEvent *e)
         case SDLK_d:
             if (!K._isPressingKey[k]) {
                 K._isPressingKey[k] = true;
-                K.isPressingLeft  = false;
-                K.isPressingRight = true;
+                K.horizDirection = LR_RIGHT;
                 K.rightCount++;
             }
             break;
@@ -202,8 +200,9 @@ static void handleKeyUp(const SDL_KeyboardEvent *e)
         case SDLK_a:
             if (K._isPressingKey[k]) {
                 K.leftCount--;
-                K.isPressingLeft  = (K.leftCount > 0);
-                K.isPressingRight = !K.isPressingLeft && (K.rightCount > 0);
+                K.horizDirection = (
+                    (K.leftCount > 0) ? LR_LEFT :
+                    (K.rightCount > 0) ? LR_RIGHT : LR_NEUTRAL);
                 K._isPressingKey[k] = false;
             }
             break;
@@ -212,8 +211,9 @@ static void handleKeyUp(const SDL_KeyboardEvent *e)
         case SDLK_d:
             if (K._isPressingKey[k]) {
                 K.rightCount--;
-                K.isPressingRight = (K.rightCount > 0);
-                K.isPressingLeft  = !K.isPressingRight && (K.leftCount > 0);
+                K.horizDirection = (
+                    (K.rightCount > 0) ? LR_RIGHT :
+                    (K.leftCount > 0) ? LR_LEFT : LR_NEUTRAL);
                 K._isPressingKey[k] = false;
             }
             break;
@@ -425,19 +425,23 @@ static int update_game()
         }
     }
     
-    // TODO: make the game more forgiving if
-    // you press both L and R at the same time
     int accelx = (G.isStanding ? 3 : 2);
-    if (K.isPressingLeft) {
-        G.vx = max(G.vx - accelx, -32);
-        G.isFacingRight = false;
-    } else if (K.isPressingRight) {
-        G.vx = min(G.vx + accelx, 32);
-        G.isFacingRight = true;
-    } else if (G.isStanding) {
-        if      (G.vx < -2) G.vx += 3;
-        else if (G.vx >  2) G.vx -= 3;
-        else                G.vx = 0;
+    switch (K.horizDirection) {
+        case LR_LEFT:
+            G.vx = max(G.vx - accelx, -32);
+            G.isFacingRight = false;
+            break;
+        case LR_RIGHT:
+            G.vx = min(G.vx + accelx, 32);
+            G.isFacingRight = true;
+            break;
+        case LR_NEUTRAL:
+            if (G.isStanding) {
+                if      (G.vx < -2) G.vx += 3;
+                else if (G.vx >  2) G.vx -= 3;
+                else                G.vx = 0;
+            }
+            break;
     }
 
     if (!G.isStanding) {
