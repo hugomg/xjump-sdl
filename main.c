@@ -2,6 +2,7 @@
 #include <SDL_ttf.h>
 
 #include <assert.h>
+#include <errno.h>
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -470,7 +471,7 @@ int main()
     {
         int64_t seed[2];
         ssize_t nread = getrandom(seed, sizeof(seed), GRND_NONBLOCK);
-        if (nread == -1) panic("Could not initialize RNG", NULL); // TODO strerror
+        if (nread == -1) panic("Could not initialize RNG", strerror(errno));
         pcg32_init(seed[0], seed[1]);
     }
 
