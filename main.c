@@ -498,7 +498,7 @@ int main()
         /*y*/ SDL_WINDOWPOS_UNDEFINED,
         /*w*/ WINDOW_W,
         /*h*/ WINDOW_H,
-        /*flags*/ SDL_WINDOW_SHOWN); // TODO: SDL_WINDOW_RESIZABLE
+        /*flags*/ 0); // TODO: SDL_WINDOW_RESIZABLE
     if (!window) panic("Could not create window", SDL_GetError());
 
     // This surface must be recreated if the window is resized
