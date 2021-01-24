@@ -501,6 +501,8 @@ int main()
         /*flags*/ SDL_WINDOW_SHOWN); // TODO: SDL_WINDOW_RESIZABLE
     if (!window) panic("Could not create window", SDL_GetError());
 
+    // This surface must be recreated if the window is resized
+    // It does not need to be freed (it happens automatically when we destroy the window)
     SDL_Surface *windowSurface = SDL_GetWindowSurface(window);
     if (!windowSurface) panic("Could not get the window surface", SDL_GetError());
 
@@ -621,7 +623,7 @@ int main()
 
 quit:
 
-    // Cleanup: //TODO do I need to free the window surface?
+    // Cleanup
     SDL_FreeSurface(uiSprites);
     SDL_FreeSurface(gameSprites);
     SDL_DestroyWindow(window);
