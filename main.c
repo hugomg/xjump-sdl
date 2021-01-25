@@ -435,7 +435,7 @@ static int update_game()
 #define FH 20 /* Width  of the UI font, in pixels */
 
 static const SDL_Rect copyrightSprite  = {     0,   0,  19*FW,  FH };
-static const SDL_Rect scoreLabelSprite = { 10*FW, 1*FH,  6*FW,  FH };
+static const SDL_Rect scoreSprite      = { 10*FW, 1*FH,  6*FW,  FH };
 static const SDL_Rect digitSprites[10] = {
     { 0*FW, FH, FW, FH },
     { 1*FW, FH, FW, FH },
@@ -452,8 +452,6 @@ static const SDL_Rect titleSprite    = {   0, 2*FH, 330, 44 };
 //static const SDL_Rect gameOverSprite = { 331, 2*FH, 150, 44 }; // TODO
 //static const SDL_Rect pauseSprite    = { 482, 2*FH,  90, 44 }; // TODO
 
-#define SCORE_NDIGITS 10
-#define SCORE_WIDTH (scoreLabelSprite.w + SCORE_NDIGITS*FW)
 
 //
 // Game Sprites
@@ -474,21 +472,49 @@ static const SDL_Rect heroSprite[8] = {
     { 3*R, 1*R, R, R}, // Fall R
 };
 
-#define WINDOW_W (34*S)
-#define WINDOW_H 615
-
+#define SCORE_NDIGITS 10
 
 int main()
 {
     if (0 != SDL_Init(SDL_INIT_VIDEO)) panic("Could not initialize SDL", SDL_GetError());
     if (0 != TTF_Init()) panic("Could not initialize SDL_ttf", TTF_GetError());
 
+    // TODO resize window
+    int topMargin  = 24;
+    int sideMargin = 24;
+    int innerMargin = 32;
+
+    int titleW = titleSprite.w;
+    int titleH = titleSprite.h;
+
+    int scoreW = scoreSprite.w + SCORE_NDIGITS*FW;
+    int scoreH = scoreSprite.h;
+
+    int gameW = S * FIELD_W;
+    int gameH = S * FIELD_H;
+
+    int copyrightW = copyrightSprite.w;
+    int copyrightH = copyrightSprite.h;
+
+    int windowW = 2*sideMargin + gameW;
+    int windowH = 2*topMargin + 3*innerMargin + titleH + scoreH + gameH + copyrightH;
+
+    int titleX     = (windowW - titleW)/2;
+    int scoreX     = (windowW - scoreW)/2;
+    int gameX      = (windowW - gameW)/2;
+    int copyrightX = (windowW - copyrightW)/2;
+
+    int titleY     = topMargin;
+    int scoreY     = titleY + titleH + innerMargin;
+    int gameY      = scoreY + scoreH + innerMargin;
+    int copyrightY = gameY + gameH + innerMargin;
+
     SDL_Window *window = SDL_CreateWindow(
         /*title*/ "xjump",
         /*x*/ SDL_WINDOWPOS_UNDEFINED,
         /*y*/ SDL_WINDOWPOS_UNDEFINED,
-        /*w*/ WINDOW_W,
-        /*h*/ WINDOW_H,
+        /*w*/ windowW,
+        /*h*/ windowH,
         /*flags*/ 0); // TODO: SDL_WINDOW_RESIZABLE
     if (!window) panic("Could not create window", SDL_GetError());
 
@@ -504,26 +530,24 @@ int main()
     SDL_Surface *gameSprites = SDL_LoadBMP("images/theme-jumpnbump.bmp");
     if (!gameSprites) panic("Could not load game sprites", SDL_GetError());
 
-    // TODO resize window
-    // TODO make the spacing look nicer
-    SDL_Rect titleDst      = { (WINDOW_W - titleSprite.w)/2, 15, 0, 0 };
-    SDL_Rect copyrightDst  = { (WINDOW_W - copyrightSprite.w)/2, WINDOW_H - 32, 0, 0 };
-    SDL_Rect scoreLabelDst = { (WINDOW_W - SCORE_WIDTH)/2, 100, 0, 0 };
-    SDL_Rect gameRect = { 16, 160, FIELD_W*S, FIELD_H*S };
-
     {
         // Draw the background elements outside of the main loop,
         // to reduce the number of draw calls in the inner loop.
+
+        SDL_Rect titleDst = { titleX, titleY, 0, 0 };
+        SDL_Rect scoreDst = { scoreX, scoreY, 0, 0 };
+        SDL_Rect copyrightDst = { copyrightX, copyrightY, 0, 0 };
+
         SDL_FillRect(background, NULL, SDL_MapRGB(windowSurface->format, 0x00, 0x00, 0x00));
-        SDL_BlitSurface(uiSprites, &titleSprite,      background, &titleDst);
-        SDL_BlitSurface(uiSprites, &scoreLabelSprite, background, &scoreLabelDst);
-        SDL_BlitSurface(uiSprites, &copyrightSprite,  background, &copyrightDst);
+        SDL_BlitSurface(uiSprites, &titleSprite,     background, &titleDst);
+        SDL_BlitSurface(uiSprites, &scoreSprite,     background, &scoreDst);
+        SDL_BlitSurface(uiSprites, &copyrightSprite, background, &copyrightDst);
         for (int y = 0; y < FIELD_H; y++) {
             for (int x = 0; x < FIELD_W; x++) {
                 const SDL_Rect *sprite = (
                         x == 0         ? &LWallSprite :
                         x == FIELD_W-1 ? &RWallSprite : &skySprite);
-                SDL_Rect spriteDst = { gameRect.x + x*S, gameRect.y + y*S, 0, 0 };
+                SDL_Rect spriteDst = { gameX + x*S, gameY + y*S, 0, 0 };
                 SDL_BlitSurface(gameSprites, sprite, background, &spriteDst);
             }
         }
@@ -601,22 +625,21 @@ int main()
                 s = s / 10;
             }
 
-            int x = scoreLabelDst.x + scoreLabelSprite.w;
             for (int i = 0; i < SCORE_NDIGITS; i++) {
                 int d = digits[i];
-                SDL_Rect digitDst = { x, 100, FW, FH };
+                SDL_Rect digitDst = { scoreX + scoreSprite.w + i*FW, scoreY, FW, FH };
                 SDL_RenderCopy(renderer, uiSpritesT, &digitSprites[d], &digitDst);
-                x += FW;
             }
         }
 
-        SDL_RenderSetClipRect(renderer, &gameRect);
+        SDL_Rect clipRect  = { gameX, gameY, gameW, gameH };
+        SDL_RenderSetClipRect(renderer, &clipRect);
         {
             for (int y = 0; y < 24; y++) {
                 const Floor *fl = &G.floors[mod(G.scrollOffset - y, FIELD_H)];
                 if (fl->left > 0) {
                     for (int x = fl->left; x <= fl->right; x++) {
-                        SDL_Rect spriteDst = { gameRect.x + x*S, gameRect.y + y*S, S, S };
+                        SDL_Rect spriteDst = { gameX + x*S, gameY + y*S, S, S };
                         SDL_RenderCopy(renderer, gameSpritesT, &floorSprite, &spriteDst);
                     }
                 }
@@ -627,7 +650,7 @@ int main()
             int isVariant = (G.isStanding? G.isIdleVariant : (G.vy > 0));
             int sprite_index = ((isFlying&1) << 2) | ((isVariant&1) << 1) | ((isRight&1) << 0);
 
-            SDL_Rect heroDst = { gameRect.x + G.x, gameRect.y + G.y, R, R };
+            SDL_Rect heroDst = { gameX + G.x, gameY + G.y, R, R };
             SDL_RenderCopy(renderer, gameSpritesT, &heroSprite[sprite_index], &heroDst);
         }
         SDL_RenderSetClipRect(renderer, NULL);
