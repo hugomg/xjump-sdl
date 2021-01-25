@@ -576,15 +576,15 @@ int main()
         SDL_RenderCopy(renderer, uiSprites, &scoreLabelSprite, &scoreLabelDst);
         SDL_RenderCopy(renderer, uiSprites, &copyrightSprite,  &copyrightDst);
 
-        SDL_RenderSetViewport(renderer, &gameRect);
+        SDL_RenderSetClipRect(renderer, &gameRect);
         for (int y = 0; y < FIELD_H; y++) {
             for (int x = 0; x < FIELD_W; x++) {
                 const SDL_Rect *sprite = ((x == 0) ? &LWallSprite : (x == FIELD_W-1) ? &RWallSprite : &skySprite);
-                const SDL_Rect spriteDst = { x*S, y*S, S, S };
+                const SDL_Rect spriteDst = { gameX + x*S, gameY + y*S, S, S };
                 SDL_RenderCopy(renderer, gameSprites, sprite, &spriteDst);
             }
         }
-        SDL_RenderSetViewport(renderer, NULL);
+        SDL_RenderSetClipRect(renderer, NULL);
 
         SDL_RenderPresent(renderer);
         SDL_SetRenderTarget(renderer, NULL);
@@ -652,13 +652,13 @@ int main()
         }
 
         {
-            SDL_RenderSetViewport(renderer, &gameRect);
+            SDL_RenderSetClipRect(renderer, &gameRect);
 
             // Floors
             for (int y = 0; y < 24; y++) {
                 const Floor *fl = &G.floors[mod(G.scrollOffset - y, FIELD_H)];
                 for (int x = fl->left; x <= fl->right; x++) {
-                    const SDL_Rect spriteDst = { x*S, y*S, S, S };
+                    const SDL_Rect spriteDst = { gameX + x*S, gameY + y*S, S, S };
                     SDL_RenderCopy(renderer, gameSprites, &floorSprite, &spriteDst);
                 }
             }
@@ -669,10 +669,10 @@ int main()
             int isVariant = (G.isStanding? G.isIdleVariant : (G.vy > 0));
             int sprite_index = (isFlying&1) << 2 | (isVariant&1) << 1 | (isRight&1) << 0;
 
-            const SDL_Rect heroDst = { G.x, G.y, R, R };
+            const SDL_Rect heroDst = { gameX + G.x, gameY + G.y, R, R };
             SDL_RenderCopy(renderer, gameSprites, &heroSprite[sprite_index], &heroDst);
 
-            SDL_RenderSetViewport(renderer, NULL);
+            SDL_RenderSetClipRect(renderer, NULL);
         }
 
         SDL_RenderPresent(renderer);
