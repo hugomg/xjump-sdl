@@ -271,8 +271,8 @@ static void generate_floor()
         floor->left  = G.fpos+5 - rnd(2,4);
         floor->right = G.fpos+5 + rnd(2,4);
     } else {
-        floor->left  = -1;
-        floor->right = -1;
+        floor->left  = -10;
+        floor->right = -20;
     }
 }
 
@@ -479,6 +479,8 @@ static const int copyrightY = gameY  + gameH  + innerMargin;
 static const int scoreLabelX  = scoreX;
 static const int scoreDigitsX = scoreX + scoreLabelW;
 
+const SDL_Rect gameRect = { gameX, gameY, gameW, gameH };
+
 // UI spritesheet
 
 static const SDL_Rect copyrightSprite  = {     0,   0, copyrightW, copyrightH };
@@ -532,10 +534,6 @@ static SDL_Texture *loadTexture(SDL_Renderer *renderer, const char *filename)
 
 int main()
 {
-    pcg32_init();
-    init_input();
-    init_game();
-
     if (0 != SDL_Init(SDL_INIT_VIDEO)) panic("Could not initialize SDL", SDL_GetError());
     if (0 != TTF_Init()) panic("Could not initialize SDL_ttf", TTF_GetError());
 
@@ -577,21 +575,27 @@ int main()
         SDL_RenderCopy(renderer, uiSprites, &titleSprite,      &titleDst);
         SDL_RenderCopy(renderer, uiSprites, &scoreLabelSprite, &scoreLabelDst);
         SDL_RenderCopy(renderer, uiSprites, &copyrightSprite,  &copyrightDst);
+
+        SDL_RenderSetViewport(renderer, &gameRect);
         for (int y = 0; y < FIELD_H; y++) {
             for (int x = 0; x < FIELD_W; x++) {
                 const SDL_Rect *sprite = (
                         x == 0         ? &LWallSprite :
                         x == FIELD_W-1 ? &RWallSprite : &skySprite);
-                SDL_Rect spriteDst = { gameX + x*S, gameY + y*S, S, S };
+                SDL_Rect spriteDst = { x*S, y*S, S, S };
                 SDL_RenderCopy(renderer, gameSprites, sprite, &spriteDst);
             }
         }
-        SDL_RenderPresent(renderer);
+        SDL_RenderSetViewport(renderer, NULL);
 
+        SDL_RenderPresent(renderer);
         SDL_SetRenderTarget(renderer, NULL);
     }
 
     int live = LIVE;
+    pcg32_init();
+    init_input();
+    init_game();
 
     while (1) {
 
@@ -650,17 +654,14 @@ int main()
         }
 
         {
-            const SDL_Rect clipRect = { gameX, gameY, gameW, gameH };
-            SDL_RenderSetClipRect(renderer, &clipRect);
+            SDL_RenderSetViewport(renderer, &gameRect);
 
             // Floors
             for (int y = 0; y < 24; y++) {
                 const Floor *fl = &G.floors[mod(G.scrollOffset - y, FIELD_H)];
-                if (fl->left > 0) {
-                    for (int x = fl->left; x <= fl->right; x++) {
-                        SDL_Rect spriteDst = { gameX + x*S, gameY + y*S, S, S };
-                        SDL_RenderCopy(renderer, gameSprites, &floorSprite, &spriteDst);
-                    }
+                for (int x = fl->left; x <= fl->right; x++) {
+                    SDL_Rect spriteDst = { x*S, y*S, S, S };
+                    SDL_RenderCopy(renderer, gameSprites, &floorSprite, &spriteDst);
                 }
             }
 
@@ -670,10 +671,10 @@ int main()
             int isVariant = (G.isStanding? G.isIdleVariant : (G.vy > 0));
             int sprite_index = ((isFlying&1) << 2) | ((isVariant&1) << 1) | ((isRight&1) << 0);
 
-            const SDL_Rect heroDst = { gameX + G.x, gameY + G.y, R, R };
+            const SDL_Rect heroDst = { G.x, G.y, R, R };
             SDL_RenderCopy(renderer, gameSprites, &heroSprite[sprite_index], &heroDst);
 
-            SDL_RenderSetClipRect(renderer, NULL);
+            SDL_RenderSetViewport(renderer, NULL);
         }
 
         SDL_RenderPresent(renderer);
