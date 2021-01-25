@@ -222,6 +222,7 @@ typedef struct {
 static struct {
 
     int64_t score;
+    bool alive;
 
     // Physics
     int x, y;   // Top-left of the hero sprite, relative to top-left of screen.
@@ -279,6 +280,7 @@ static void generate_floor()
 static void init_game()
 {
     G.score = 0;
+    G.alive = true;
 
     G.x    = (FIELD_W/2)*S - R/2;
     G.y    = (FIELD_H-4)*S - R;
@@ -326,12 +328,7 @@ static bool isStanding()
     return (fl->left*S - 24 < G.x && G.x < fl->right*S + 8);
 }
 
-enum Alive {
-    LIVE,
-    DEAD,
-};
-
-static int update_game()
+static void update_game()
 {
     if (G.hasStarted) {
         if (G.scrollSpeed < 5000) {
@@ -350,14 +347,13 @@ static int update_game()
 
     if (G.y >= S*FIELD_H) {
         printf("DEAD!\n"); // TODO: add game over screen & delete this
-        return DEAD;
+        G.alive = false;
     }
 
     if (G.y < 80) {
         G.scrollCount = 0;
         scroll();
     }
-
 
     // TODO: use coordinates at the center of the sprite
     // to make this part of the code more symmetric.
@@ -423,8 +419,6 @@ static int update_game()
             G.jump = 0;
         }
     }
-
-    return LIVE;
 }
 
 //
@@ -451,11 +445,11 @@ static const int scoreH = FH;
 static const int titleW = 330;
 static const int titleH = 44;
 
-static const int gameOverW = 150;
-static const int gameOverH = 44;
+//static const int gameOverW = 150;
+//static const int gameOverH = 44;
 
-static const int pauseW = 90;
-static const int pauseH = 44;
+//static const int pauseW = 90;
+//static const int pauseH = 44;
 
 // Screen positions
 
@@ -479,17 +473,17 @@ static const int copyrightY = gameY  + gameH  + innerMargin;
 static const int scoreLabelX  = scoreX;
 static const int scoreDigitsX = scoreX + scoreLabelW;
 
-static const int gameOverX = gameX + (gameW - gameOverW)/2;
-static const int gameOverY = gameY + (gameH - gameOverH)*2/5;
-static const int pauseX = gameX + (gameW - pauseW)/2;
-static const int pauseY = gameY + (gameH - pauseH)*2/5;
+//static const int gameOverX = gameX + (gameW - gameOverW)/2;
+//static const int gameOverY = gameY + (gameH - gameOverH)*2/5;
+//static const int pauseX = gameX + (gameW - pauseW)/2;
+//static const int pauseY = gameY + (gameH - pauseH)*2/5;
 
-const SDL_Rect gameDst       = { gameX, gameY, gameW, gameH };
-const SDL_Rect titleDst      = { titleX, titleY, titleW, titleH };
-const SDL_Rect scoreLabelDst = { scoreLabelX, scoreY, scoreLabelW, scoreH };
-const SDL_Rect copyrightDst  = { copyrightX, copyrightY, copyrightW, copyrightH };
-const SDL_Rect gameOverDst   = { gameOverX, gameOverY, gameOverW, gameOverH };
-const SDL_Rect pauseDst      = { pauseX, pauseY, pauseW, pauseH };
+static const SDL_Rect gameDst       = { gameX, gameY, gameW, gameH };
+static const SDL_Rect titleDst      = { titleX, titleY, titleW, titleH };
+static const SDL_Rect scoreLabelDst = { scoreLabelX, scoreY, scoreLabelW, scoreH };
+static const SDL_Rect copyrightDst  = { copyrightX, copyrightY, copyrightW, copyrightH };
+//static const SDL_Rect gameOverDst   = { gameOverX, gameOverY, gameOverW, gameOverH };
+//static const SDL_Rect pauseDst      = { pauseX, pauseY, pauseW, pauseH };
 
 // UI spritesheet
 
@@ -508,8 +502,8 @@ static const SDL_Rect digitSprites[10] = {
     { 9*FW, FH, FW, FH }
 };
 static const SDL_Rect titleSprite    = {   0, 2*FH,    titleW,    titleH };
-static const SDL_Rect gameOverSprite = { 331, 2*FH, gameOverW, gameOverH }; // TODO
-static const SDL_Rect pauseSprite    = { 482, 2*FH,    pauseW,    pauseH }; // TODO
+//static const SDL_Rect gameOverSprite = { 331, 2*FH, gameOverW, gameOverH }; // TODO
+//static const SDL_Rect pauseSprite    = { 482, 2*FH,    pauseW,    pauseH }; // TODO
 
 // Game spritesheet
 
@@ -596,7 +590,6 @@ int main()
         SDL_SetRenderTarget(renderer, NULL);
     }
 
-    int live = LIVE;
     pcg32_init();
     init_input();
     init_game();
@@ -636,8 +629,8 @@ int main()
             goto quit;
         }
 
-        if (live == LIVE) {
-            live = update_game();
+        if (G.alive) {
+            update_game();
         }
 
         //
