@@ -633,13 +633,14 @@ int main()
         }
 
         //
-        // Draw Screen
+        // Draw
         //
 
         SDL_RenderClear(renderer);
         SDL_RenderCopy(renderer, background, NULL, NULL);
 
         {
+            // Score
             int64_t s = G.score;
             for (int i = NscoreDigits-1; i >= 0; i--) {
                 int d = s % 10; s = s / 10;
@@ -652,6 +653,7 @@ int main()
             const SDL_Rect clipRect = { gameX, gameY, gameW, gameH };
             SDL_RenderSetClipRect(renderer, &clipRect);
 
+            // Floors
             for (int y = 0; y < 24; y++) {
                 const Floor *fl = &G.floors[mod(G.scrollOffset - y, FIELD_H)];
                 if (fl->left > 0) {
@@ -662,6 +664,7 @@ int main()
                 }
             }
 
+            // Player
             int isFlying  = !G.isStanding;
             int isRight   = G.isFacingRight;
             int isVariant = (G.isStanding? G.isIdleVariant : (G.vy > 0));
