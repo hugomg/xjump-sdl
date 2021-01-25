@@ -428,14 +428,61 @@ static int update_game()
 }
 
 //
-// UI Sprites
+// Drawing
 //
 
-#define FW 15 /* Height of the UI font, in pixels */
-#define FH 20 /* Width  of the UI font, in pixels */
+// Sizes
 
-static const SDL_Rect copyrightSprite  = {     0,   0,  19*FW,  FH };
-static const SDL_Rect scoreSprite      = { 10*FW, 1*FH,  6*FW,  FH };
+static const int FW = 15; // Height of the UI font
+static const int FH = 20; // Width  of the UI font
+
+static const int gameW = S * FIELD_W;
+static const int gameH = S * FIELD_H;
+
+static const int copyrightW = 19 * FW;
+static const int copyrightH = FH;
+
+static const int NscoreDigits = 10;
+static const int scoreLabelW  = 6 * FW;
+static const int scoreDigitsW = NscoreDigits * FW;
+static const int scoreW = scoreLabelW + scoreDigitsW;
+static const int scoreH = FH;
+
+static const int titleW = 330;
+static const int titleH = 44;
+
+static const int gameOverW = 150;
+static const int gameOverH = 44;
+
+static const int pauseW = 90;
+static const int pauseH = 44;
+
+// Screen positions
+
+static const int   topMargin = 24;
+static const int  sideMargin = 24;
+static const int innerMargin = 32;
+
+static const int windowW = 2*sideMargin + gameW;
+static const int windowH = 2*topMargin + 3*innerMargin + titleH + scoreH + gameH + copyrightH;
+
+static const int titleX     = (windowW - titleW)/2;
+static const int scoreX     = (windowW - scoreW)/2;
+static const int gameX      = (windowW - gameW)/2;
+static const int copyrightX = (windowW - copyrightW)/2;
+
+static const int titleY     = topMargin;
+static const int scoreY     = titleY + titleH + innerMargin;
+static const int gameY      = scoreY + scoreH + innerMargin;
+static const int copyrightY = gameY  + gameH  + innerMargin;
+
+static const int scoreLabelX  = scoreX;
+static const int scoreDigitsX = scoreX + scoreLabelW;
+
+// UI spritesheet
+
+static const SDL_Rect copyrightSprite  = {     0,   0, copyrightW, copyrightH };
+static const SDL_Rect scoreSprite      = { 10*FW,  FH, scoreLabelW, scoreH };
 static const SDL_Rect digitSprites[10] = {
     { 0*FW, FH, FW, FH },
     { 1*FW, FH, FW, FH },
@@ -448,14 +495,11 @@ static const SDL_Rect digitSprites[10] = {
     { 8*FW, FH, FW, FH },
     { 9*FW, FH, FW, FH }
 };
-static const SDL_Rect titleSprite    = {   0, 2*FH, 330, 44 };
-//static const SDL_Rect gameOverSprite = { 331, 2*FH, 150, 44 }; // TODO
-//static const SDL_Rect pauseSprite    = { 482, 2*FH,  90, 44 }; // TODO
+static const SDL_Rect titleSprite    = {   0, 2*FH,    titleW,    titleH };
+static const SDL_Rect gameOverSprite = { 331, 2*FH, gameOverW, gameOverH }; // TODO
+static const SDL_Rect pauseSprite    = { 482, 2*FH,    pauseW,    pauseH }; // TODO
 
-
-//
-// Game Sprites
-//
+// Game spritesheet
 
 static const SDL_Rect skySprite   = { 4*R, 0*S, S, S};
 static const SDL_Rect LWallSprite = { 4*R, 1*S, S, S};
@@ -472,7 +516,7 @@ static const SDL_Rect heroSprite[8] = {
     { 3*R, 1*R, R, R}, // Fall R
 };
 
-#define SCORE_NDIGITS 10
+// Spritesheet loading
 
 static SDL_Texture *loadTexture(SDL_Renderer *renderer, const char *filename)
 {
@@ -488,37 +532,6 @@ static SDL_Texture *loadTexture(SDL_Renderer *renderer, const char *filename)
 
 int main()
 {
-    int topMargin  = 24;
-    int sideMargin = 24;
-    int innerMargin = 32;
-
-    int titleW = titleSprite.w;
-    int titleH = titleSprite.h;
-
-    int scoreLabelW = scoreSprite.w;
-    int scoreLabelH = scoreSprite.h;
-
-    int scoreW = scoreLabelW + SCORE_NDIGITS*FW;
-    int scoreH = scoreLabelH;
-
-    int gameW = S * FIELD_W;
-    int gameH = S * FIELD_H;
-
-    int copyrightW = copyrightSprite.w;
-    int copyrightH = copyrightSprite.h;
-
-    int windowW = 2*sideMargin + gameW;
-    int windowH = 2*topMargin + 3*innerMargin + titleH + scoreH + gameH + copyrightH;
-
-    int titleX     = (windowW - titleW)/2;
-    int scoreX     = (windowW - scoreW)/2;
-    int gameX      = (windowW - gameW)/2;
-    int copyrightX = (windowW - copyrightW)/2;
-
-    int titleY     = topMargin;
-    int scoreY     = titleY + titleH + innerMargin;
-    int gameY      = scoreY + scoreH + innerMargin;
-    int copyrightY = gameY + gameH + innerMargin;
 
     if (0 != SDL_Init(SDL_INIT_VIDEO)) panic("Could not initialize SDL", SDL_GetError());
     if (0 != TTF_Init()) panic("Could not initialize SDL_ttf", TTF_GetError());
@@ -550,11 +563,12 @@ int main()
     if (!background) panic("Could not create background texture", SDL_GetError());
 
     {
+        SDL_SetRenderTarget(renderer, background);
+
         const SDL_Rect titleDst     = { titleX, titleY, titleW, titleH };
-        const SDL_Rect scoreDst     = { scoreX, scoreY, scoreLabelW, scoreLabelH };
+        const SDL_Rect scoreDst     = { scoreX, scoreY, scoreLabelW, scoreH };
         const SDL_Rect copyrightDst = { copyrightX, copyrightY, copyrightW, copyrightH };
 
-        SDL_SetRenderTarget(renderer, background);
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);;
         SDL_RenderClear(renderer);
         SDL_RenderCopy(renderer, uiSprites, &titleSprite, &titleDst);
@@ -570,6 +584,7 @@ int main()
             }
         }
         SDL_RenderPresent(renderer);
+
         SDL_SetRenderTarget(renderer, NULL);
     }
 
@@ -625,24 +640,25 @@ int main()
         SDL_RenderCopy(renderer, background, NULL, NULL);
 
         {
-            int digits[SCORE_NDIGITS];
+            int digits[NscoreDigits];
 
             long int s = G.score;
-            for (int i = SCORE_NDIGITS-1; i >= 0; i--) {
+            for (int i = NscoreDigits; i >= 0; i--) {
                 digits[i] = s % 10;
                 s = s / 10;
             }
 
-            for (int i = 0; i < SCORE_NDIGITS; i++) {
+            for (int i = 0; i < NscoreDigits; i++) {
                 int d = digits[i];
-                SDL_Rect digitDst = { scoreX + scoreSprite.w + i*FW, scoreY, FW, FH };
+                const SDL_Rect digitDst = { scoreDigitsX + i*FW, scoreY, FW, FH };
                 SDL_RenderCopy(renderer, uiSprites, &digitSprites[d], &digitDst);
             }
         }
 
-        SDL_Rect clipRect  = { gameX, gameY, gameW, gameH };
-        SDL_RenderSetClipRect(renderer, &clipRect);
         {
+            const SDL_Rect clipRect = { gameX, gameY, gameW, gameH };
+            SDL_RenderSetClipRect(renderer, &clipRect);
+
             for (int y = 0; y < 24; y++) {
                 const Floor *fl = &G.floors[mod(G.scrollOffset - y, FIELD_H)];
                 if (fl->left > 0) {
@@ -658,10 +674,12 @@ int main()
             int isVariant = (G.isStanding? G.isIdleVariant : (G.vy > 0));
             int sprite_index = ((isFlying&1) << 2) | ((isVariant&1) << 1) | ((isRight&1) << 0);
 
-            SDL_Rect heroDst = { gameX + G.x, gameY + G.y, R, R };
+            const SDL_Rect heroDst = { gameX + G.x, gameY + G.y, R, R };
             SDL_RenderCopy(renderer, gameSprites, &heroSprite[sprite_index], &heroDst);
+
+            SDL_RenderSetClipRect(renderer, NULL);
         }
-        SDL_RenderSetClipRect(renderer, NULL);
+
         SDL_RenderPresent(renderer);
 
         //
