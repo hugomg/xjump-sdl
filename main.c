@@ -222,7 +222,10 @@ typedef struct {
 static struct {
 
     int64_t score;
-    bool alive;
+
+    // Gameover
+    bool isAlive;
+    int gameOverCount; // How many frames since we died
 
     // Physics
     int x, y;   // Top-left of the hero sprite, relative to top-left of screen.
@@ -280,7 +283,9 @@ static void generate_floor()
 static void init_game()
 {
     G.score = 0;
-    G.alive = true;
+
+    G.isAlive = true;
+    G.gameOverCount = 0;
 
     G.x    = (FIELD_W/2)*S - R/2;
     G.y    = (FIELD_H-4)*S - R;
@@ -330,6 +335,11 @@ static bool isStanding()
 
 static void update_game()
 {
+    if (!G.isAlive) {
+        G.gameOverCount++;
+        return;
+    }
+
     if (G.hasStarted) {
         if (G.scrollSpeed < 5000) {
             G.scrollSpeed++;
@@ -346,8 +356,8 @@ static void update_game()
     G.y += G.vy;
 
     if (G.y >= S*FIELD_H) {
-        printf("DEAD!\n"); // TODO: add game over screen & delete this
-        G.alive = false;
+        G.isAlive = false;
+        return;
     }
 
     if (G.y < 80) {
@@ -445,8 +455,8 @@ static const int scoreH = FH;
 static const int titleW = 330;
 static const int titleH = 44;
 
-//static const int gameOverW = 150;
-//static const int gameOverH = 44;
+static const int gameOverW = 150;
+static const int gameOverH = 44;
 
 //static const int pauseW = 90;
 //static const int pauseH = 44;
@@ -473,8 +483,8 @@ static const int copyrightY = gameY  + gameH  + innerMargin;
 static const int scoreLabelX  = scoreX;
 static const int scoreDigitsX = scoreX + scoreLabelW;
 
-//static const int gameOverX = gameX + (gameW - gameOverW)/2;
-//static const int gameOverY = gameY + (gameH - gameOverH)*2/5;
+static const int gameOverX = gameX + (gameW - gameOverW)/2;
+static const int gameOverY = gameY + (gameH - gameOverH)*2/5;
 //static const int pauseX = gameX + (gameW - pauseW)/2;
 //static const int pauseY = gameY + (gameH - pauseH)*2/5;
 
@@ -482,7 +492,7 @@ static const SDL_Rect gameDst       = { gameX, gameY, gameW, gameH };
 static const SDL_Rect titleDst      = { titleX, titleY, titleW, titleH };
 static const SDL_Rect scoreLabelDst = { scoreLabelX, scoreY, scoreLabelW, scoreH };
 static const SDL_Rect copyrightDst  = { copyrightX, copyrightY, copyrightW, copyrightH };
-//static const SDL_Rect gameOverDst   = { gameOverX, gameOverY, gameOverW, gameOverH };
+static const SDL_Rect gameOverDst   = { gameOverX, gameOverY, gameOverW, gameOverH };
 //static const SDL_Rect pauseDst      = { pauseX, pauseY, pauseW, pauseH };
 
 // UI spritesheet
@@ -502,7 +512,7 @@ static const SDL_Rect digitSprites[10] = {
     { 9*FW, FH, FW, FH }
 };
 static const SDL_Rect titleSprite    = {   0, 2*FH,    titleW,    titleH };
-//static const SDL_Rect gameOverSprite = { 331, 2*FH, gameOverW, gameOverH }; // TODO
+static const SDL_Rect gameOverSprite = { 331, 2*FH, gameOverW, gameOverH };
 //static const SDL_Rect pauseSprite    = { 482, 2*FH,    pauseW,    pauseH }; // TODO
 
 // Game spritesheet
@@ -535,6 +545,16 @@ static SDL_Texture *loadTexture(SDL_Renderer *renderer, const char *filename)
     SDL_FreeSurface(surface);
     return texture;
 }
+
+//
+// Application state
+// -----------------
+
+typedef enum {
+    APP_PLAYING,
+    APP_PAUSED,
+    APP_HIGHSCORES
+} AppState;
 
 int main()
 {
@@ -594,6 +614,8 @@ int main()
     init_input();
     init_game();
 
+    //AppState state = APP_PLAYING;
+
     while (1) {
 
         uint32_t frame_start_time = SDL_GetTicks();
@@ -629,9 +651,11 @@ int main()
             goto quit;
         }
 
-        if (G.alive) {
-            update_game();
+        if (!G.isAlive && G.gameOverCount >= 80) {
+            goto quit; // TODO highscores
         }
+
+        update_game();
 
         //
         // Draw
@@ -672,6 +696,10 @@ int main()
             SDL_RenderCopy(renderer, gameSprites, &heroSprite[sprite_index], &heroDst);
 
             SDL_RenderSetClipRect(renderer, NULL);
+        }
+
+        if (!G.isAlive) {
+            SDL_RenderCopy(renderer, uiSprites, &gameOverSprite, &gameOverDst);
         }
 
         SDL_RenderPresent(renderer);
