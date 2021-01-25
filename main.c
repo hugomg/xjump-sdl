@@ -474,6 +474,18 @@ static const SDL_Rect heroSprite[8] = {
 
 #define SCORE_NDIGITS 10
 
+static SDL_Texture *loadTexture(SDL_Renderer *renderer, const char *filename)
+{
+    SDL_Surface *surface = SDL_LoadBMP(filename);
+    if (!surface) return NULL;
+
+    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
+    if (!texture) return NULL;
+
+    SDL_FreeSurface(surface);
+    return texture;
+}
+
 int main()
 {
     int topMargin  = 24;
@@ -483,8 +495,11 @@ int main()
     int titleW = titleSprite.w;
     int titleH = titleSprite.h;
 
-    int scoreW = scoreSprite.w + SCORE_NDIGITS*FW;
-    int scoreH = scoreSprite.h;
+    int scoreLabelW = scoreSprite.w;
+    int scoreLabelH = scoreSprite.h;
+
+    int scoreW = scoreLabelW + SCORE_NDIGITS*FW;
+    int scoreH = scoreLabelH;
 
     int gameW = S * FIELD_W;
     int gameH = S * FIELD_H;
@@ -517,59 +532,46 @@ int main()
         /*flags*/ SDL_WINDOW_RESIZABLE);
     if (!window) panic("Could not create window", SDL_GetError());
 
-    SDL_Surface *windowSurface = SDL_GetWindowSurface(window);
-    if (!windowSurface) panic("Could not get the window surface", SDL_GetError());
+    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    if (!renderer) panic("Coult not create SDL renderer", SDL_GetError());
 
-    SDL_Surface *uiSprites = SDL_LoadBMP("images/ui-sprites.bmp");
+    SDL_Texture *uiSprites = loadTexture(renderer, "images/ui-sprites.bmp");
     if (!uiSprites) panic("Could not load UI sprites", SDL_GetError());
 
-    SDL_Surface *gameSprites = SDL_LoadBMP("images/theme-jumpnbump.bmp");
+    SDL_Texture *gameSprites = loadTexture(renderer, "images/theme-jumpnbump.bmp");
     if (!gameSprites) panic("Could not load game sprites", SDL_GetError());
 
-    SDL_Surface *background = SDL_ConvertSurface(windowSurface, windowSurface->format, 0);
-    if (!background) panic("Could not create background surface", SDL_GetError());
+    // Tell the renderer to stretch the drawing if the window is resized
+    SDL_RenderSetLogicalSize(renderer, windowW, windowH);
+
+    // Create a background texture with all the things that don't change from
+    // frame to frame. This reduces the number of draw calls in the inner loop.
+    SDL_Texture *background = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, windowW, windowH);
+    if (!background) panic("Could not create background texture", SDL_GetError());
 
     {
-        // To reduce the number of draw calls in the inner loop,
-        // we render the background and UI elements ahead of time.
-        SDL_Rect titleDst = { titleX, titleY, 0, 0 };
-        SDL_Rect scoreDst = { scoreX, scoreY, 0, 0 };
-        SDL_Rect copyrightDst = { copyrightX, copyrightY, 0, 0 };
+        const SDL_Rect titleDst     = { titleX, titleY, titleW, titleH };
+        const SDL_Rect scoreDst     = { scoreX, scoreY, scoreLabelW, scoreLabelH };
+        const SDL_Rect copyrightDst = { copyrightX, copyrightY, copyrightW, copyrightH };
 
-        SDL_FillRect(background, NULL, SDL_MapRGB(windowSurface->format, 0x00, 0x00, 0x00));
-        SDL_BlitSurface(uiSprites, &titleSprite,     background, &titleDst);
-        SDL_BlitSurface(uiSprites, &scoreSprite,     background, &scoreDst);
-        SDL_BlitSurface(uiSprites, &copyrightSprite, background, &copyrightDst);
+        SDL_SetRenderTarget(renderer, background);
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);;
+        SDL_RenderClear(renderer);
+        SDL_RenderCopy(renderer, uiSprites, &titleSprite, &titleDst);
+        SDL_RenderCopy(renderer, uiSprites, &scoreSprite, &scoreDst);
+        SDL_RenderCopy(renderer, uiSprites, &copyrightSprite, &copyrightDst);
         for (int y = 0; y < FIELD_H; y++) {
             for (int x = 0; x < FIELD_W; x++) {
                 const SDL_Rect *sprite = (
                         x == 0         ? &LWallSprite :
                         x == FIELD_W-1 ? &RWallSprite : &skySprite);
-                SDL_Rect spriteDst = { gameX + x*S, gameY + y*S, 0, 0 };
-                SDL_BlitSurface(gameSprites, sprite, background, &spriteDst);
+                SDL_Rect spriteDst = { gameX + x*S, gameY + y*S, S, S };
+                SDL_RenderCopy(renderer, gameSprites, sprite, &spriteDst);
             }
         }
+        SDL_RenderPresent(renderer);
+        SDL_SetRenderTarget(renderer, NULL);
     }
-
-    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-    if (!renderer) panic("Coult not create SDL renderer", SDL_GetError());
-
-    SDL_Texture *uiSpritesT = SDL_CreateTextureFromSurface(renderer, uiSprites);
-    if (!uiSpritesT) panic("Could not create UI sprites texture", SDL_GetError());
-
-    SDL_Texture *gameSpritesT = SDL_CreateTextureFromSurface(renderer, gameSprites);
-    if (!gameSpritesT) panic("Could not create game sprites texture", SDL_GetError());
-
-    SDL_Texture *backgroundT = SDL_CreateTextureFromSurface(renderer, background);
-    if (!backgroundT) panic("Could not create background texture", SDL_GetError());
-
-    // At this point everything we need is in a texture so we can get rid of the surfaces.
-    windowSurface = NULL; // (gets freed automatically)
-    SDL_FreeSurface(gameSprites); gameSprites = NULL;
-    SDL_FreeSurface(uiSprites);   uiSprites = NULL;
-    SDL_FreeSurface(background);  background = NULL;
-
-    SDL_RenderSetLogicalSize(renderer, windowW, windowH);
 
     pcg32_init();
     init_input();
@@ -620,7 +622,7 @@ int main()
         //
 
         SDL_RenderClear(renderer);
-        SDL_RenderCopy(renderer, backgroundT, NULL, NULL);
+        SDL_RenderCopy(renderer, background, NULL, NULL);
 
         {
             int digits[SCORE_NDIGITS];
@@ -634,7 +636,7 @@ int main()
             for (int i = 0; i < SCORE_NDIGITS; i++) {
                 int d = digits[i];
                 SDL_Rect digitDst = { scoreX + scoreSprite.w + i*FW, scoreY, FW, FH };
-                SDL_RenderCopy(renderer, uiSpritesT, &digitSprites[d], &digitDst);
+                SDL_RenderCopy(renderer, uiSprites, &digitSprites[d], &digitDst);
             }
         }
 
@@ -646,7 +648,7 @@ int main()
                 if (fl->left > 0) {
                     for (int x = fl->left; x <= fl->right; x++) {
                         SDL_Rect spriteDst = { gameX + x*S, gameY + y*S, S, S };
-                        SDL_RenderCopy(renderer, gameSpritesT, &floorSprite, &spriteDst);
+                        SDL_RenderCopy(renderer, gameSprites, &floorSprite, &spriteDst);
                     }
                 }
             }
@@ -657,7 +659,7 @@ int main()
             int sprite_index = ((isFlying&1) << 2) | ((isVariant&1) << 1) | ((isRight&1) << 0);
 
             SDL_Rect heroDst = { gameX + G.x, gameY + G.y, R, R };
-            SDL_RenderCopy(renderer, gameSpritesT, &heroSprite[sprite_index], &heroDst);
+            SDL_RenderCopy(renderer, gameSprites, &heroSprite[sprite_index], &heroDst);
         }
         SDL_RenderSetClipRect(renderer, NULL);
         SDL_RenderPresent(renderer);
@@ -677,9 +679,9 @@ int main()
 
 quit:
 
-    SDL_DestroyTexture(gameSpritesT);
-    SDL_DestroyTexture(uiSpritesT);
-    SDL_DestroyTexture(backgroundT);
+    SDL_DestroyTexture(background);
+    SDL_DestroyTexture(gameSprites);
+    SDL_DestroyTexture(uiSprites);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
 
