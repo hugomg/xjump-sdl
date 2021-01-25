@@ -482,7 +482,7 @@ static const int scoreDigitsX = scoreX + scoreLabelW;
 // UI spritesheet
 
 static const SDL_Rect copyrightSprite  = {     0,   0, copyrightW, copyrightH };
-static const SDL_Rect scoreSprite      = { 10*FW,  FH, scoreLabelW, scoreH };
+static const SDL_Rect scoreLabelSprite = { 10*FW,  FH, scoreLabelW, scoreH };
 static const SDL_Rect digitSprites[10] = {
     { 0*FW, FH, FW, FH },
     { 1*FW, FH, FW, FH },
@@ -532,6 +532,9 @@ static SDL_Texture *loadTexture(SDL_Renderer *renderer, const char *filename)
 
 int main()
 {
+    pcg32_init();
+    init_input();
+    init_game();
 
     if (0 != SDL_Init(SDL_INIT_VIDEO)) panic("Could not initialize SDL", SDL_GetError());
     if (0 != TTF_Init()) panic("Could not initialize SDL_ttf", TTF_GetError());
@@ -565,15 +568,15 @@ int main()
     {
         SDL_SetRenderTarget(renderer, background);
 
-        const SDL_Rect titleDst     = { titleX, titleY, titleW, titleH };
-        const SDL_Rect scoreDst     = { scoreX, scoreY, scoreLabelW, scoreH };
-        const SDL_Rect copyrightDst = { copyrightX, copyrightY, copyrightW, copyrightH };
+        const SDL_Rect titleDst      = { titleX, titleY, titleW, titleH };
+        const SDL_Rect scoreLabelDst = { scoreLabelX, scoreY, scoreLabelW, scoreH };
+        const SDL_Rect copyrightDst  = { copyrightX, copyrightY, copyrightW, copyrightH };
 
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);;
         SDL_RenderClear(renderer);
-        SDL_RenderCopy(renderer, uiSprites, &titleSprite, &titleDst);
-        SDL_RenderCopy(renderer, uiSprites, &scoreSprite, &scoreDst);
-        SDL_RenderCopy(renderer, uiSprites, &copyrightSprite, &copyrightDst);
+        SDL_RenderCopy(renderer, uiSprites, &titleSprite,      &titleDst);
+        SDL_RenderCopy(renderer, uiSprites, &scoreLabelSprite, &scoreLabelDst);
+        SDL_RenderCopy(renderer, uiSprites, &copyrightSprite,  &copyrightDst);
         for (int y = 0; y < FIELD_H; y++) {
             for (int x = 0; x < FIELD_W; x++) {
                 const SDL_Rect *sprite = (
@@ -588,9 +591,6 @@ int main()
         SDL_SetRenderTarget(renderer, NULL);
     }
 
-    pcg32_init();
-    init_input();
-    init_game();
     int live = LIVE;
 
     while (1) {
