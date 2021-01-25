@@ -479,7 +479,17 @@ static const int copyrightY = gameY  + gameH  + innerMargin;
 static const int scoreLabelX  = scoreX;
 static const int scoreDigitsX = scoreX + scoreLabelW;
 
-const SDL_Rect gameRect = { gameX, gameY, gameW, gameH };
+static const int gameOverX = gameX + (gameW - gameOverW)/2;
+static const int gameOverY = gameY + (gameH - gameOverH)*2/5;
+static const int pauseX = gameX + (gameW - pauseW)/2;
+static const int pauseY = gameY + (gameH - pauseH)*2/5;
+
+const SDL_Rect gameDst       = { gameX, gameY, gameW, gameH };
+const SDL_Rect titleDst      = { titleX, titleY, titleW, titleH };
+const SDL_Rect scoreLabelDst = { scoreLabelX, scoreY, scoreLabelW, scoreH };
+const SDL_Rect copyrightDst  = { copyrightX, copyrightY, copyrightW, copyrightH };
+const SDL_Rect gameOverDst   = { gameOverX, gameOverY, gameOverW, gameOverH };
+const SDL_Rect pauseDst      = { pauseX, pauseY, pauseW, pauseH };
 
 // UI spritesheet
 
@@ -566,17 +576,13 @@ int main()
     {
         SDL_SetRenderTarget(renderer, background);
 
-        const SDL_Rect titleDst      = { titleX, titleY, titleW, titleH };
-        const SDL_Rect scoreLabelDst = { scoreLabelX, scoreY, scoreLabelW, scoreH };
-        const SDL_Rect copyrightDst  = { copyrightX, copyrightY, copyrightW, copyrightH };
-
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);;
         SDL_RenderClear(renderer);
         SDL_RenderCopy(renderer, uiSprites, &titleSprite,      &titleDst);
         SDL_RenderCopy(renderer, uiSprites, &scoreLabelSprite, &scoreLabelDst);
         SDL_RenderCopy(renderer, uiSprites, &copyrightSprite,  &copyrightDst);
 
-        SDL_RenderSetClipRect(renderer, &gameRect);
+        SDL_RenderSetClipRect(renderer, &gameDst);
         for (int y = 0; y < FIELD_H; y++) {
             for (int x = 0; x < FIELD_W; x++) {
                 const SDL_Rect *sprite = ((x == 0) ? &LWallSprite : (x == FIELD_W-1) ? &RWallSprite : &skySprite);
@@ -652,7 +658,7 @@ int main()
         }
 
         {
-            SDL_RenderSetClipRect(renderer, &gameRect);
+            SDL_RenderSetClipRect(renderer, &gameDst);
 
             // Floors
             for (int y = 0; y < 24; y++) {
