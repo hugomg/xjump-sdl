@@ -476,10 +476,6 @@ static const SDL_Rect heroSprite[8] = {
 
 int main()
 {
-    if (0 != SDL_Init(SDL_INIT_VIDEO)) panic("Could not initialize SDL", SDL_GetError());
-    if (0 != TTF_Init()) panic("Could not initialize SDL_ttf", TTF_GetError());
-
-    // TODO resize window
     int topMargin  = 24;
     int sideMargin = 24;
     int innerMargin = 32;
@@ -509,20 +505,20 @@ int main()
     int gameY      = scoreY + scoreH + innerMargin;
     int copyrightY = gameY + gameH + innerMargin;
 
+    if (0 != SDL_Init(SDL_INIT_VIDEO)) panic("Could not initialize SDL", SDL_GetError());
+    if (0 != TTF_Init()) panic("Could not initialize SDL_ttf", TTF_GetError());
+
     SDL_Window *window = SDL_CreateWindow(
         /*title*/ "xjump",
         /*x*/ SDL_WINDOWPOS_UNDEFINED,
         /*y*/ SDL_WINDOWPOS_UNDEFINED,
         /*w*/ windowW,
         /*h*/ windowH,
-        /*flags*/ 0); // TODO: SDL_WINDOW_RESIZABLE
+        /*flags*/ SDL_WINDOW_RESIZABLE);
     if (!window) panic("Could not create window", SDL_GetError());
 
     SDL_Surface *windowSurface = SDL_GetWindowSurface(window);
     if (!windowSurface) panic("Could not get the window surface", SDL_GetError());
-
-    SDL_Surface *background = SDL_ConvertSurface(windowSurface, windowSurface->format, 0);
-    if (!background) panic("Could not create background surface", SDL_GetError());
 
     SDL_Surface *uiSprites = SDL_LoadBMP("images/ui-sprites.bmp");
     if (!uiSprites) panic("Could not load UI sprites", SDL_GetError());
@@ -530,10 +526,12 @@ int main()
     SDL_Surface *gameSprites = SDL_LoadBMP("images/theme-jumpnbump.bmp");
     if (!gameSprites) panic("Could not load game sprites", SDL_GetError());
 
-    {
-        // Draw the background elements outside of the main loop,
-        // to reduce the number of draw calls in the inner loop.
+    SDL_Surface *background = SDL_ConvertSurface(windowSurface, windowSurface->format, 0);
+    if (!background) panic("Could not create background surface", SDL_GetError());
 
+    {
+        // To reduce the number of draw calls in the inner loop,
+        // we render the background and UI elements ahead of time.
         SDL_Rect titleDst = { titleX, titleY, 0, 0 };
         SDL_Rect scoreDst = { scoreX, scoreY, 0, 0 };
         SDL_Rect copyrightDst = { copyrightX, copyrightY, 0, 0 };
@@ -556,14 +554,22 @@ int main()
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     if (!renderer) panic("Coult not create SDL renderer", SDL_GetError());
 
-    SDL_Texture *backgroundT = SDL_CreateTextureFromSurface(renderer, background);
-    if (!backgroundT) panic("Could not create background texture", SDL_GetError());
-
     SDL_Texture *uiSpritesT = SDL_CreateTextureFromSurface(renderer, uiSprites);
     if (!uiSpritesT) panic("Could not create UI sprites texture", SDL_GetError());
 
     SDL_Texture *gameSpritesT = SDL_CreateTextureFromSurface(renderer, gameSprites);
     if (!gameSpritesT) panic("Could not create game sprites texture", SDL_GetError());
+
+    SDL_Texture *backgroundT = SDL_CreateTextureFromSurface(renderer, background);
+    if (!backgroundT) panic("Could not create background texture", SDL_GetError());
+
+    // At this point everything we need is in a texture so we can get rid of the surfaces.
+    windowSurface = NULL; // (gets freed automatically)
+    SDL_FreeSurface(gameSprites); gameSprites = NULL;
+    SDL_FreeSurface(uiSprites);   uiSprites = NULL;
+    SDL_FreeSurface(background);  background = NULL;
+
+    SDL_RenderSetLogicalSize(renderer, windowW, windowH);
 
     pcg32_init();
     init_input();
@@ -671,18 +677,10 @@ int main()
 
 quit:
 
-    //
-    // Cleanup
-    //
-
     SDL_DestroyTexture(gameSpritesT);
     SDL_DestroyTexture(uiSpritesT);
     SDL_DestroyTexture(backgroundT);
     SDL_DestroyRenderer(renderer);
-
-    SDL_FreeSurface(gameSprites);
-    SDL_FreeSurface(uiSprites);
-    SDL_FreeSurface(background);
     SDL_DestroyWindow(window);
 
     TTF_Quit();
