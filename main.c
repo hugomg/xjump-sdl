@@ -52,10 +52,14 @@ static void panic(const char *what, const char *fullError)
 static uint64_t pcgState = 0x853c49e6748fea9bULL; // Mutable state of the RNG
 static uint64_t pcgSeq   = 0xda3e39cb94b95bdbULL; // PCG "sequence" parameter
 
-static void pcg32_init(uint64_t seed, uint64_t seq)
+static void pcg32_init()
 {
-    pcgState = seed;
-    pcgSeq = (seq << 1) | 1;
+    int64_t seed[2];
+    ssize_t nread = getrandom(seed, sizeof(seed), GRND_NONBLOCK);
+    if (nread == -1) panic("Could not initialize RNG", strerror(errno));
+
+    pcgState = seed[0];
+    pcgSeq = (seed[1] << 1) | 1;
 }
 
 static uint32_t pcg32_next()
@@ -476,13 +480,6 @@ static const SDL_Rect heroSprite[8] = {
 
 int main()
 {
-    {
-        int64_t seed[2];
-        ssize_t nread = getrandom(seed, sizeof(seed), GRND_NONBLOCK);
-        if (nread == -1) panic("Could not initialize RNG", strerror(errno));
-        pcg32_init(seed[0], seed[1]);
-    }
-
     if (0 != SDL_Init(SDL_INIT_VIDEO)) panic("Could not initialize SDL", SDL_GetError());
     if (0 != TTF_Init()) panic("Could not initialize SDL_ttf", TTF_GetError());
 
@@ -511,6 +508,7 @@ int main()
     SDL_Rect scoreLabelDst  = { (WINDOW_W - SCORE_WIDTH)/2, 100, 0, 0 };
     uint32_t backgroundColor = SDL_MapRGB(windowSurface->format, 0x00, 0x00, 0x00);
 
+    pcg32_init();
     init_input();
     init_game();
     int live = LIVE;
