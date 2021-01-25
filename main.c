@@ -88,23 +88,34 @@ static uint32_t rnd(uint32_t a, uint32_t b)
 }
 
 //
-// Input State
-// -----------
+// Joystick state
+// ---------------
+
+// This component keeps track of the "joystick" state.
+// If both LEFT and RIGHT a pressed at the same time, the most recent one wins.
 
 // TODO: quit with Shift+Q
 // TODO: pause with P.
 
+typedef enum {
+    LR_NEUTRAL,
+    LR_LEFT,
+    LR_RIGHT
+} LeftRight;
 
 typedef enum {
     INPUT_JUMP,
     INPUT_LEFT,
     INPUT_RIGHT,
-    INPUT_QUIT,
-    INPUT_PAUSE,
     INPUT_NOTHING,
 } Input;
 
 #define N_INPUT (INPUT_NOTHING+1)
+
+static struct {
+    LeftRight horizDirection;
+    bool isPressing[N_INPUT];
+} K;
 
 static Input translateHotkey(SDL_Keysym k)
 {
@@ -124,33 +135,11 @@ static Input translateHotkey(SDL_Keysym k)
         case SDLK_d:
             return INPUT_RIGHT;
 
-        case SDLK_q:
-            if (k.mod & KMOD_SHIFT) {
-                return INPUT_QUIT;
-            } else {
-                return INPUT_NOTHING;
-            }
-
-        case SDLK_p:
-            return INPUT_PAUSE;
-
         default:
             return INPUT_NOTHING;
     }
 }
 
-typedef enum {
-    LR_NEUTRAL,
-    LR_LEFT,
-    LR_RIGHT
-} LeftRight;
-
-// This struct keeps track of the "joystick" state.
-// If both LEFT and RIGHT a pressed at the same time, the most recent one wins.
-static struct {
-    LeftRight horizDirection;
-    bool isPressing[N_INPUT];
-} K;
 
 static void init_input()
 {
@@ -173,9 +162,6 @@ static void handleKeyDown(const SDL_KeyboardEvent *e)
         case INPUT_RIGHT:
             K.horizDirection = LR_RIGHT;
             break;
-
-        default:
-            break;
     }
 }
 
@@ -192,9 +178,6 @@ static void handleKeyUp(const SDL_KeyboardEvent *e)
         case INPUT_RIGHT:
             K.horizDirection  = (K.isPressing[INPUT_LEFT] ? LR_LEFT : LR_NEUTRAL);
             break;
-
-        default:
-            break;
     }
 }
 
@@ -208,11 +191,11 @@ static void handleKeyUp(const SDL_KeyboardEvent *e)
 #define FIELD_W 32 /* Width of playing field, in tiles */
 #define FIELD_H 24 /* Height of playing field, in tiles */
 
-enum GameState {
-    STATE_GAME,
-    STATE_PAUSE,
-    STATE_HIGHSCORES,
-};
+typedef enum {
+    STATE_RUNNING,
+    STATE_PAUSED,
+    STATE_GAMEOVER,
+} GameState;
 
 typedef struct {
     int left;
@@ -223,9 +206,9 @@ static struct {
 
     int64_t score;
 
-    // Gameover
-    bool isAlive;
-    int gameOverCount; // How many frames since we died
+    // Gameover / Pause
+    GameState state;
+    int gameOverCount; // How many frames since we hit gameover
 
     // Physics
     int x, y;   // Top-left of the hero sprite, relative to top-left of screen.
@@ -284,7 +267,7 @@ static void init_game()
 {
     G.score = 0;
 
-    G.isAlive = true;
+    G.state = STATE_RUNNING;
     G.gameOverCount = 0;
 
     G.x    = (FIELD_W/2)*S - R/2;
@@ -335,10 +318,14 @@ static bool isStanding()
 
 static void update_game()
 {
-    if (!G.isAlive) {
+    if (G.state == STATE_GAMEOVER) {
         G.gameOverCount++;
         return;
+    } else if (G.state == STATE_PAUSED) {
+        return;
     }
+
+    // else: state == STATE_RUNNING;
 
     if (G.hasStarted) {
         if (G.scrollSpeed < 5000) {
@@ -356,7 +343,7 @@ static void update_game()
     G.y += G.vy;
 
     if (G.y >= S*FIELD_H) {
-        G.isAlive = false;
+        G.state = STATE_GAMEOVER;
         return;
     }
 
@@ -458,8 +445,8 @@ static const int titleH = 44;
 static const int gameOverW = 150;
 static const int gameOverH = 44;
 
-//static const int pauseW = 90;
-//static const int pauseH = 44;
+static const int pauseW = 90;
+static const int pauseH = 44;
 
 // Screen positions
 
@@ -485,15 +472,15 @@ static const int scoreDigitsX = scoreX + scoreLabelW;
 
 static const int gameOverX = gameX + (gameW - gameOverW)/2;
 static const int gameOverY = gameY + (gameH - gameOverH)*2/5;
-//static const int pauseX = gameX + (gameW - pauseW)/2;
-//static const int pauseY = gameY + (gameH - pauseH)*2/5;
+static const int pauseX = gameX + (gameW - pauseW)/2;
+static const int pauseY = gameY + (gameH - pauseH)*2/5;
 
 static const SDL_Rect gameDst       = { gameX, gameY, gameW, gameH };
 static const SDL_Rect titleDst      = { titleX, titleY, titleW, titleH };
 static const SDL_Rect scoreLabelDst = { scoreLabelX, scoreY, scoreLabelW, scoreH };
 static const SDL_Rect copyrightDst  = { copyrightX, copyrightY, copyrightW, copyrightH };
 static const SDL_Rect gameOverDst   = { gameOverX, gameOverY, gameOverW, gameOverH };
-//static const SDL_Rect pauseDst      = { pauseX, pauseY, pauseW, pauseH };
+static const SDL_Rect pauseDst      = { pauseX, pauseY, pauseW, pauseH };
 
 // UI spritesheet
 
@@ -513,7 +500,7 @@ static const SDL_Rect digitSprites[10] = {
 };
 static const SDL_Rect titleSprite    = {   0, 2*FH,    titleW,    titleH };
 static const SDL_Rect gameOverSprite = { 331, 2*FH, gameOverW, gameOverH };
-//static const SDL_Rect pauseSprite    = { 482, 2*FH,    pauseW,    pauseH }; // TODO
+static const SDL_Rect pauseSprite    = { 482, 2*FH,    pauseW,    pauseH };
 
 // Game spritesheet
 
@@ -614,8 +601,6 @@ int main()
     init_input();
     init_game();
 
-    //AppState state = APP_PLAYING;
-
     while (1) {
 
         uint32_t frame_start_time = SDL_GetTicks();
@@ -630,12 +615,30 @@ int main()
                 case SDL_QUIT:
                     goto quit;
 
-                case SDL_KEYDOWN:
-                    handleKeyDown(&e.key);
-                    break;
-
                 case SDL_KEYUP:
                     handleKeyUp(&e.key);
+                    break;
+
+                case SDL_KEYDOWN:
+                    handleKeyDown(&e.key);
+                    if (e.key.keysym.sym == SDLK_q && (e.key.keysym.mod & KMOD_SHIFT)) {
+                        goto quit;
+                    }
+                    switch (G.state) {
+                        case STATE_RUNNING:
+                            if (e.key.keysym.sym == SDLK_p
+                             || e.key.keysym.sym == SDLK_PAUSE) {
+                                G.state = STATE_PAUSED;
+                            }
+                            break;
+
+                        case STATE_PAUSED:
+                            G.state = STATE_RUNNING;
+                            break;
+
+                        case STATE_GAMEOVER:
+                            break;
+                    }
                     break;
 
                 default:
@@ -647,15 +650,10 @@ int main()
         // Update Game State
         //
 
-        if (K.isPressing[INPUT_QUIT]) {
-            goto quit;
-        }
-
-        if (!G.isAlive && G.gameOverCount >= 80) {
+        update_game();
+        if (G.state == STATE_GAMEOVER && G.gameOverCount >= 80) {
             goto quit; // TODO highscores
         }
-
-        update_game();
 
         //
         // Draw
@@ -698,8 +696,17 @@ int main()
             SDL_RenderSetClipRect(renderer, NULL);
         }
 
-        if (!G.isAlive) {
-            SDL_RenderCopy(renderer, uiSprites, &gameOverSprite, &gameOverDst);
+        switch (G.state) {
+            case STATE_GAMEOVER:
+                SDL_RenderCopy(renderer, uiSprites, &gameOverSprite, &gameOverDst);
+                break;
+
+            case STATE_PAUSED:
+                SDL_RenderCopy(renderer, uiSprites, &pauseSprite, &pauseDst);
+                break;
+
+            default:
+                break;
         }
 
         SDL_RenderPresent(renderer);
