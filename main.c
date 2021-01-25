@@ -221,7 +221,7 @@ typedef struct {
 
 static struct {
 
-    int score;
+    int64_t score;
 
     // Physics
     int x, y;   // Top-left of the hero sprite, relative to top-left of screen.
@@ -640,16 +640,9 @@ int main()
         SDL_RenderCopy(renderer, background, NULL, NULL);
 
         {
-            int digits[NscoreDigits];
-
-            long int s = G.score;
+            int64_t s = G.score;
             for (int i = NscoreDigits-1; i >= 0; i--) {
-                digits[i] = s % 10;
-                s = s / 10;
-            }
-
-            for (int i = 0; i < NscoreDigits; i++) {
-                int d = digits[i];
+                int d = s % 10; s = s / 10;
                 const SDL_Rect digitDst = { scoreDigitsX + i*FW, scoreY, FW, FH };
                 SDL_RenderCopy(renderer, uiSprites, &digitSprites[d], &digitDst);
             }
