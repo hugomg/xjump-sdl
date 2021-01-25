@@ -643,7 +643,7 @@ int main()
             int digits[NscoreDigits];
 
             long int s = G.score;
-            for (int i = NscoreDigits; i >= 0; i--) {
+            for (int i = NscoreDigits-1; i >= 0; i--) {
                 digits[i] = s % 10;
                 s = s / 10;
             }
