@@ -355,13 +355,22 @@ static void update_game()
         scroll();
     }
 
-    if (G.x < S && G.vx <= 0) {
-        G.x  = S;
+    // When we bounce off the walls the new X coordinate is calculated
+    // assuming that we bounce back at 1/2 the speed. This is subtle but
+    // makes the result of bouncing off the walls slightly more predictable.
+    // The "-2" in the formula is a dampening factor that avoids a perpetual
+    // 1px bounce if we run straight into a wall (which can appear as a strange
+    // flickering).
+
+    int leftLimit = S;
+    if (G.x < leftLimit && G.vx <= 0) {
+        G.x  = leftLimit + max(0, leftLimit - G.x - 2)/2;
         G.vx = -G.vx/2;
     }
 
-    if (G.x > (FIELD_W-1)*S - R && G.vx >= 0) {
-        G.x  = (FIELD_W-1)*S - R;
+    int rightLimit = (FIELD_W-1)*S - R;
+    if (G.x > rightLimit && G.vx >= 0) {
+        G.x  = rightLimit - max(0, G.x - rightLimit - 2)/2;
         G.vx = -G.vx/2;
     }
 
