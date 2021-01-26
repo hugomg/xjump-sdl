@@ -208,6 +208,7 @@ static struct {
 
     // Gameover / Pause
     GameState state;
+    int needsRepaint;  // CPU optimization: don't redraw static screens.
     int gameOverCount; // How many frames since we hit gameover
 
     // Physics
@@ -268,6 +269,7 @@ static void init_game()
     G.score = 0;
 
     G.state = STATE_RUNNING;
+    G.needsRepaint  = 0;
     G.gameOverCount = 0;
 
     G.x    = (FIELD_W/2)*S - R/2;
@@ -321,11 +323,16 @@ static void update_game()
     if (G.state == STATE_GAMEOVER) {
         G.gameOverCount++;
         return;
-    } else if (G.state == STATE_PAUSED) {
+
+    }
+
+    if (G.state == STATE_PAUSED) {
         return;
     }
 
     // else: state == STATE_RUNNING;
+
+    G.needsRepaint = true;
 
     if (G.hasStarted) {
         if (G.scrollSpeed < 5000) {
@@ -659,57 +666,63 @@ int main()
         // Draw
         //
 
-        SDL_RenderClear(renderer);
-        SDL_RenderCopy(renderer, background, NULL, NULL);
+        if (G.needsRepaint) {
 
-        {
-            // Score
-            int64_t s = G.score;
-            for (int i = NscoreDigits-1; i >= 0; i--) {
-                int d = s % 10; s = s / 10;
-                const SDL_Rect digitDst = { scoreDigitsX + i*FW, scoreY, FW, FH };
-                SDL_RenderCopy(renderer, uiSprites, &digitSprites[d], &digitDst);
-            }
-        }
+            SDL_RenderClear(renderer);
+            SDL_RenderCopy(renderer, background, NULL, NULL);
 
-        {
-            SDL_RenderSetClipRect(renderer, &gameDst);
-
-            // Floors
-            for (int y = 0; y < 24; y++) {
-                const Floor *fl = &G.floors[mod(G.scrollOffset - y, FIELD_H)];
-                for (int x = fl->left; x <= fl->right; x++) {
-                    const SDL_Rect spriteDst = { gameX + x*S, gameY + y*S, S, S };
-                    SDL_RenderCopy(renderer, gameSprites, &floorSprite, &spriteDst);
+            {
+                // Score
+                int64_t s = G.score;
+                for (int i = NscoreDigits-1; i >= 0; i--) {
+                    int d = s % 10; s = s / 10;
+                    const SDL_Rect digitDst = { scoreDigitsX + i*FW, scoreY, FW, FH };
+                    SDL_RenderCopy(renderer, uiSprites, &digitSprites[d], &digitDst);
                 }
             }
 
-            // Player
-            int isFlying  = !G.isStanding;
-            int isRight   = G.isFacingRight;
-            int isVariant = (G.isStanding? G.isIdleVariant : (G.vy > 0));
-            int sprite_index = (isFlying&1) << 2 | (isVariant&1) << 1 | (isRight&1) << 0;
+            {
+                SDL_RenderSetClipRect(renderer, &gameDst);
 
-            const SDL_Rect heroDst = { gameX + G.x, gameY + G.y, R, R };
-            SDL_RenderCopy(renderer, gameSprites, &heroSprite[sprite_index], &heroDst);
+                // Floors
+                for (int y = 0; y < 24; y++) {
+                    const Floor *fl = &G.floors[mod(G.scrollOffset - y, FIELD_H)];
+                    for (int x = fl->left; x <= fl->right; x++) {
+                        const SDL_Rect spriteDst = { gameX + x*S, gameY + y*S, S, S };
+                        SDL_RenderCopy(renderer, gameSprites, &floorSprite, &spriteDst);
+                    }
+                }
 
-            SDL_RenderSetClipRect(renderer, NULL);
+                // Player
+                int isFlying  = !G.isStanding;
+                int isRight   = G.isFacingRight;
+                int isVariant = (G.isStanding? G.isIdleVariant : (G.vy > 0));
+                int sprite_index = (isFlying&1) << 2 | (isVariant&1) << 1 | (isRight&1) << 0;
+
+                const SDL_Rect heroDst = { gameX + G.x, gameY + G.y, R, R };
+                SDL_RenderCopy(renderer, gameSprites, &heroSprite[sprite_index], &heroDst);
+
+                SDL_RenderSetClipRect(renderer, NULL);
+            }
+
+            switch (G.state) {
+                case STATE_GAMEOVER:
+                    SDL_RenderCopy(renderer, uiSprites, &gameOverSprite, &gameOverDst);
+                    G.needsRepaint = false;
+                    break;
+
+                case STATE_PAUSED:
+                    SDL_RenderCopy(renderer, uiSprites, &pauseSprite, &pauseDst);
+                    G.needsRepaint = false;
+                    break;
+
+                default:
+                    break;
+            }
+
+            SDL_RenderPresent(renderer);
+
         }
-
-        switch (G.state) {
-            case STATE_GAMEOVER:
-                SDL_RenderCopy(renderer, uiSprites, &gameOverSprite, &gameOverDst);
-                break;
-
-            case STATE_PAUSED:
-                SDL_RenderCopy(renderer, uiSprites, &pauseSprite, &pauseDst);
-                break;
-
-            default:
-                break;
-        }
-
-        SDL_RenderPresent(renderer);
 
         //
         // Wait
