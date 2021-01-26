@@ -309,9 +309,9 @@ static bool isStanding()
         return false;
     }
 
-    // TODO: one of these should be <=
+    // We're standing as long as 8/32 pixels touch the ground.
     const Floor *fl = get_floor(G.scrollOffset - y);
-    return (fl->left*S - 24 < G.x && G.x < fl->right*S + 8);
+    return (fl->left*S - 24 <= G.x && G.x <= fl->right*S + 8);
 }
 
 static void update_game()
