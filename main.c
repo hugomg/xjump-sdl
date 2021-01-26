@@ -94,9 +94,6 @@ static uint32_t rnd(uint32_t a, uint32_t b)
 // This component keeps track of the "joystick" state.
 // If both LEFT and RIGHT a pressed at the same time, the most recent one wins.
 
-// TODO: quit with Shift+Q
-// TODO: pause with P.
-
 typedef enum {
     LR_NEUTRAL,
     LR_LEFT,
@@ -149,11 +146,10 @@ static void init_input()
     }
 }
 
-static void handleKeyDown(const SDL_KeyboardEvent *e)
+static void input_keydown(const SDL_Keysym sym)
 {
-    int input = translateHotkey(e->keysym);
+    int input = translateHotkey(sym);
     K.isPressing[input] = true;
-
     switch (input) {
         case INPUT_LEFT:
             K.horizDirection = LR_LEFT;
@@ -165,9 +161,9 @@ static void handleKeyDown(const SDL_KeyboardEvent *e)
     }
 }
 
-static void handleKeyUp(const SDL_KeyboardEvent *e)
+static void input_keyup(const SDL_Keysym sym)
 {
-    int input = translateHotkey(e->keysym);
+    int input = translateHotkey(sym);
     K.isPressing[input] = false;
 
     switch (input) {
@@ -544,12 +540,6 @@ static SDL_Texture *loadTexture(SDL_Renderer *renderer, const char *filename)
 // Application state
 // -----------------
 
-typedef enum {
-    APP_PLAYING,
-    APP_PAUSED,
-    APP_HIGHSCORES
-} AppState;
-
 int main()
 {
     if (0 != SDL_Init(SDL_INIT_VIDEO)) panic("Could not initialize SDL", SDL_GetError());
@@ -623,11 +613,11 @@ int main()
                     goto quit;
 
                 case SDL_KEYUP:
-                    handleKeyUp(&e.key);
+                    input_keyup(e.key.keysym);
                     break;
 
                 case SDL_KEYDOWN:
-                    handleKeyDown(&e.key);
+                    input_keydown(e.key.keysym);
                     if (e.key.keysym.sym == SDLK_q && (e.key.keysym.mod & KMOD_SHIFT)) {
                         goto quit;
                     }
