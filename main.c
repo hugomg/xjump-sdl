@@ -350,21 +350,18 @@ static void update_game()
         return;
     }
 
-    if (G.y < 80) {
+    if (G.y < 5*S) {
         G.scrollCount = 0;
         scroll();
     }
 
-    // TODO: use coordinates at the center of the sprite
-    // to make this part of the code more symmetric.
-
     if (G.x < S && G.vx <= 0) {
-        G.x  = 16;
+        G.x  = S;
         G.vx = -G.vx/2;
     }
 
-    if (G.x > 29*S && G.vx >= 0) {
-        G.x  = 29*S;
+    if (G.x > (FIELD_W-1)*S - R && G.vx >= 0) {
+        G.x  = (FIELD_W-1)*S - R;
         G.vx = -G.vx/2;
     }
 
