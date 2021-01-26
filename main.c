@@ -648,6 +648,12 @@ int main()
                     }
                     break;
 
+                case SDL_WINDOWEVENT:
+                    if (e.window.event == SDL_WINDOWEVENT_FOCUS_LOST && G.state == STATE_RUNNING) {
+                        G.state = STATE_PAUSED;
+                    }
+                    break;
+
                 default:
                     break;
             }
