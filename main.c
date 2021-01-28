@@ -1,3 +1,5 @@
+// TODO: GPL license
+
 #include <SDL.h>
 #include <SDL_ttf.h>
 
@@ -104,18 +106,17 @@ typedef enum {
     INPUT_JUMP,
     INPUT_LEFT,
     INPUT_RIGHT,
-    INPUT_NOTHING,
+    INPUT_OTHER,
 } Input;
-
-#define N_INPUT (INPUT_NOTHING+1)
 
 static struct {
     LeftRight horizDirection;
-    bool isPressing[N_INPUT];
+    bool isPressing[INPUT_OTHER+1];
 } K;
 
 static Input translateHotkey(SDL_Keysym k)
 {
+    // TODO should we use scan codes?
     switch (k.sym) {
         case SDLK_UP:
         case SDLK_DOWN:
@@ -133,22 +134,23 @@ static Input translateHotkey(SDL_Keysym k)
             return INPUT_RIGHT;
 
         default:
-            return INPUT_NOTHING;
+            return INPUT_OTHER;
     }
 }
 
 
 static void init_input()
 {
+    // TODO should we also call this on FOCUS changes?
     K.horizDirection = LR_NEUTRAL;
-    for (int i=0; i < N_INPUT; i++) {
+    for (int i = 0; i < INPUT_OTHER; i++) {
         K.isPressing[i] = false;
     }
 }
 
 static void input_keydown(const SDL_Keysym sym)
 {
-    int input = translateHotkey(sym);
+    Input input = translateHotkey(sym);
     K.isPressing[input] = true;
     switch (input) {
         case INPUT_LEFT:
@@ -158,14 +160,16 @@ static void input_keydown(const SDL_Keysym sym)
         case INPUT_RIGHT:
             K.horizDirection = LR_RIGHT;
             break;
+
+        default:
+            break;
     }
 }
 
 static void input_keyup(const SDL_Keysym sym)
 {
-    int input = translateHotkey(sym);
+    Input input = translateHotkey(sym);
     K.isPressing[input] = false;
-
     switch (input) {
         case INPUT_LEFT:
             K.horizDirection = (K.isPressing[INPUT_RIGHT] ? LR_RIGHT : LR_NEUTRAL);
@@ -174,9 +178,11 @@ static void input_keyup(const SDL_Keysym sym)
         case INPUT_RIGHT:
             K.horizDirection  = (K.isPressing[INPUT_LEFT] ? LR_LEFT : LR_NEUTRAL);
             break;
+
+        default:
+            break;
     }
 }
-
 //
 // Game Logic
 // ----------
@@ -507,6 +513,7 @@ static const SDL_Rect digitSprites[10] = {
     { 8*FW, FH, FW, FH },
     { 9*FW, FH, FW, FH }
 };
+
 static const SDL_Rect titleSprite    = {   0, 2*FH,    titleW,    titleH };
 static const SDL_Rect gameOverSprite = { 331, 2*FH, gameOverW, gameOverH };
 static const SDL_Rect pauseSprite    = { 482, 2*FH,    pauseW,    pauseH };
