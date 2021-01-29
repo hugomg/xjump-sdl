@@ -1,7 +1,7 @@
 CFLAGS = -std=c11 -pedantic -Wall -Wextra -O2
 
-SDL_CFLAGS = `pkg-config SDL2_ttf --cflags`
-SDL_LIBS = `pkg-config SDL2_ttf --libs`
+SDL_CFLAGS = `pkg-config sdl2 --cflags`
+SDL_LIBS = `pkg-config sdl2 --libs`
 
 xjump: main.o
 	$(CC) $(LDFLAGS) $< $(SDL_LIBS) -o $@

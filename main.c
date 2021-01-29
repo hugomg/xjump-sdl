@@ -1,7 +1,6 @@
 // TODO: GPL license
 
 #include <SDL.h>
-#include <SDL_ttf.h>
 
 #include <assert.h>
 #include <errno.h>
@@ -434,89 +433,157 @@ static void update_game()
 }
 
 //
-// Drawing
+// Colors
 //
 
-// Sizes
+static const SDL_Color textColor      = { 255, 255, 255, 255 };
+static const SDL_Color copyrightColor = {   0, 255,   0, 255 };
+static const SDL_Color borderColor    = {   0,   0, 128, 255 };
+static const SDL_Color boxColor       = {   0,   0, 255, 255 };
 
-static const int FW = 15; // Height of the UI font
-static const int FH = 20; // Width  of the UI font
+//
+// Text rendering
+// --------------
+//
+// To preserve the classic Xjump look, we ship with a copy of the font that the
+// original used: courBO18 (Courier, 18pt, Bold, Oblique), the 100dpi variant.
+// On Fedora it can be installed with sdnf install xorg-x11-fonts-100dpi.
+//
+// We do have to use a bitmapped font here. Originally I tried using the
+// SDL_TTF library to render the text because I was interested in being able to
+// render UTF-8 user names. However, the TrueType fonts only looked nice at a
+// small font size if we used anti-aliasing, which ruined the Xjump "look". Not
+// to mention the headache of finding the font file. We'd probably need to ship
+// our own font to avoid adding depending on the system fonts...
+//
+// In our font bitmap file the glyphs are horizontally spaced slightly farther
+// apart than they are in normal text. This is because this is an italic font
+// and each glyph can spill a bit into the glyph to its right.
+
+static const int FW = 15; // Width of each glyph in the text
+static const int FH = 25; // Height of each glyph in the text
+
+static const int FBW = 20; // Width of each glyph in the font bitmap file
+static const int FBH = 25; // Height of each glyph in the font bitmap file
+
+static const int boxBorder = 4;
+static const int boxPaddingTop    = 7;
+static const int boxPaddingBottom = 5;
+static const int boxPaddingLeft   = 4;
+static const int boxPaddingRight  = 4;
+
+static void draw_text(
+        SDL_Renderer *renderer,
+        SDL_Texture *font,
+        const char *message,
+        SDL_Color color,
+        const SDL_Rect *where)
+{
+    // This method of setting the final color assumes that the font color in
+    // the original texture is white.
+    SDL_SetTextureColorMod(font, color.r, color.g, color.b);
+
+    for (int i = 0; message[i] != '\0'; i++) {
+        char c = message[i];
+        if (c < ' ' || '~' < c) { c = 127; } // Default glyph
+        int ii = (c - ' ') / 16;
+        int jj = (c - ' ') % 16;
+        const SDL_Rect src = { jj*FBW, ii*FBH, FBW, FBH };
+        const SDL_Rect dst = { where->x + FW*i, where->y, FBW, FBH };
+        SDL_RenderCopy(renderer, font, &src, &dst);
+    }
+}
+
+static void draw_text_box(SDL_Renderer *renderer, const SDL_Rect *content)
+{
+    const SDL_Rect padding = {
+        content->x - boxPaddingLeft,
+        content->y - boxPaddingTop,
+        content->w + boxPaddingLeft + boxPaddingRight,
+        content->h + boxPaddingTop + boxPaddingBottom,
+    };
+    const SDL_Rect border = {
+       padding.x - boxBorder,
+       padding.y - boxBorder,
+       padding.w + 2*boxBorder,
+       padding.h + 2*boxBorder,
+    };
+
+    SDL_SetRenderDrawColor(renderer, borderColor.r, borderColor.g, borderColor.b, borderColor.a);
+    SDL_RenderFillRect(renderer, &border);
+
+    SDL_SetRenderDrawColor(renderer, borderColor.r, boxColor.g, boxColor.b, boxColor.a);
+    SDL_RenderFillRect(renderer, &padding);
+}
+
+//
+// Window placement
+//
+
+// Parameters
+
+static const int windowMarginTop   = 24;
+static const int windowMarginLeft  = 24;
+static const int windowMarginInner = 32;
+
+static const int windowMarginBottom = windowMarginTop;
+static const int windowMarginRight  = windowMarginLeft;
+
+static const int NscoreDigits = 10;
+
+// Widths and Heights
+
+static const char titleMsg[]      = "FALLING TOWER ver 3.0";
+static const char scoreLabelMsg[] = "Floor";
+static const char copyrightMsg[]  = "(C) 1997 ROYALPANDA";
+static const char gameOverMsg[]   = "Game Over";
+static const char pauseMsg[]      = "Pause";
+
+static const int titleW      = FW * (sizeof(titleMsg) - 1);
+static const int scoreLabelW = FW * (sizeof(scoreLabelMsg) - 1);
+static const int copyrightW  = FW * (sizeof(copyrightMsg) - 1);
+static const int gameOverW   = FW * (sizeof(gameOverMsg) - 1);
+static const int pauseW      = FW * (sizeof(pauseMsg) - 1);
+
+static const int textBoxH = FH + boxBorder + boxPaddingLeft + boxPaddingRight  + boxBorder;
 
 static const int gameW = S * FIELD_W;
 static const int gameH = S * FIELD_H;
 
-static const int copyrightW = 19 * FW;
-static const int copyrightH = FH;
-
-static const int NscoreDigits = 10;
-static const int scoreLabelW  = 6 * FW;
-static const int scoreDigitsW = NscoreDigits * FW;
+static const int scoreDigitsW = (NscoreDigits + 1) * FW;
 static const int scoreW = scoreLabelW + scoreDigitsW;
-static const int scoreH = FH;
 
-static const int titleW = 330;
-static const int titleH = 44;
-
-static const int gameOverW = 150;
-static const int gameOverH = 44;
-
-static const int pauseW = 90;
-static const int pauseH = 44;
+static const int windowW = windowMarginLeft + gameW + windowMarginRight;
+static const int windowH = windowMarginTop + 3*windowMarginInner + textBoxH + 2*FH + + gameH + windowMarginBottom;
 
 // Screen positions
-
-static const int   topMargin = 24;
-static const int  sideMargin = 24;
-static const int innerMargin = 32;
-
-static const int windowW = 2*sideMargin + gameW;
-static const int windowH = 2*topMargin + 3*innerMargin + titleH + scoreH + gameH + copyrightH;
 
 static const int titleX     = (windowW - titleW)/2;
 static const int scoreX     = (windowW - scoreW)/2;
 static const int gameX      = (windowW - gameW)/2;
 static const int copyrightX = (windowW - copyrightW)/2;
 
-static const int titleY     = topMargin;
-static const int scoreY     = titleY + titleH + innerMargin;
-static const int gameY      = scoreY + scoreH + innerMargin;
-static const int copyrightY = gameY  + gameH  + innerMargin;
+static const int titleY     = windowMarginTop + boxBorder + boxPaddingTop;
+static const int scoreY     = titleY + FH + boxPaddingBottom + boxBorder + windowMarginInner;
+static const int gameY      = scoreY + FH + windowMarginInner;
+static const int copyrightY = gameY + gameH + windowMarginInner;
 
 static const int scoreLabelX  = scoreX;
 static const int scoreDigitsX = scoreX + scoreLabelW;
 
 static const int gameOverX = gameX + (gameW - gameOverW)/2;
-static const int gameOverY = gameY + (gameH - gameOverH)*2/5;
+static const int gameOverY = gameY + (gameH - FH)*2/5;
+
 static const int pauseX = gameX + (gameW - pauseW)/2;
-static const int pauseY = gameY + (gameH - pauseH)*2/5;
+static const int pauseY = gameY + (gameH - FH)*2/5;
 
-static const SDL_Rect gameDst       = { gameX, gameY, gameW, gameH };
-static const SDL_Rect titleDst      = { titleX, titleY, titleW, titleH };
-static const SDL_Rect scoreLabelDst = { scoreLabelX, scoreY, scoreLabelW, scoreH };
-static const SDL_Rect copyrightDst  = { copyrightX, copyrightY, copyrightW, copyrightH };
-static const SDL_Rect gameOverDst   = { gameOverX, gameOverY, gameOverW, gameOverH };
-static const SDL_Rect pauseDst      = { pauseX, pauseY, pauseW, pauseH };
-
-// UI spritesheet
-
-static const SDL_Rect copyrightSprite  = {     0,   0, copyrightW, copyrightH };
-static const SDL_Rect scoreLabelSprite = { 10*FW,  FH, scoreLabelW, scoreH };
-static const SDL_Rect digitSprites[10] = {
-    { 0*FW, FH, FW, FH },
-    { 1*FW, FH, FW, FH },
-    { 2*FW, FH, FW, FH },
-    { 3*FW, FH, FW, FH },
-    { 4*FW, FH, FW, FH },
-    { 5*FW, FH, FW, FH },
-    { 6*FW, FH, FW, FH },
-    { 7*FW, FH, FW, FH },
-    { 8*FW, FH, FW, FH },
-    { 9*FW, FH, FW, FH }
-};
-
-static const SDL_Rect titleSprite    = {   0, 2*FH,    titleW,    titleH };
-static const SDL_Rect gameOverSprite = { 331, 2*FH, gameOverW, gameOverH };
-static const SDL_Rect pauseSprite    = { 482, 2*FH,    pauseW,    pauseH };
+static const SDL_Rect gameDst        = { gameX, gameY, gameW, gameH };
+static const SDL_Rect titleDst       = { titleX, titleY, titleW, FH };
+static const SDL_Rect scoreLabelDst  = { scoreLabelX, scoreY, scoreLabelW, FH };
+static const SDL_Rect scoreDigitsDst = { scoreDigitsX, scoreY, scoreDigitsW, FH };
+static const SDL_Rect copyrightDst   = { copyrightX, copyrightY, copyrightW, FH };
+static const SDL_Rect gameOverDst    = { gameOverX, gameOverY, gameOverW, FH };
+static const SDL_Rect pauseDst       = { pauseX, pauseY, pauseW, FH };
 
 // Game spritesheet
 
@@ -535,19 +602,6 @@ static const SDL_Rect heroSprite[8] = {
     { 3*R, 1*R, R, R}, // Fall R
 };
 
-// Spritesheet loading
-
-static SDL_Texture *loadTexture(SDL_Renderer *renderer, const char *filename)
-{
-    SDL_Surface *surface = SDL_LoadBMP(filename);
-    if (!surface) return NULL;
-
-    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
-    if (!texture) return NULL;
-
-    SDL_FreeSurface(surface);
-    return texture;
-}
 
 //
 // Application state
@@ -556,7 +610,13 @@ static SDL_Texture *loadTexture(SDL_Renderer *renderer, const char *filename)
 int main()
 {
     if (0 != SDL_Init(SDL_INIT_VIDEO)) panic("Could not initialize SDL", SDL_GetError());
-    if (0 != TTF_Init()) panic("Could not initialize SDL_ttf", TTF_GetError());
+
+    SDL_Surface *spritesSurface = SDL_LoadBMP("images/theme-jumpnbump.bmp");
+    if (!spritesSurface) panic("Could not sprite file ", SDL_GetError());
+
+    SDL_Surface *fontSurface = SDL_LoadBMP("images/ui-font.bmp");
+    if (!fontSurface) panic("Could not load font file", SDL_GetError());
+    SDL_SetColorKey(fontSurface, SDL_TRUE, SDL_MapRGB(fontSurface->format, 0, 0, 0)); // (make background transparent)
 
     SDL_Window *window = SDL_CreateWindow(
         /*title*/ "xjump",
@@ -570,38 +630,56 @@ int main()
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     if (!renderer) panic("Coult not create SDL renderer", SDL_GetError());
 
-    SDL_Texture *uiSprites = loadTexture(renderer, "images/ui-sprites.bmp");
-    if (!uiSprites) panic("Could not load UI sprites", SDL_GetError());
+    SDL_Texture *sprites = SDL_CreateTextureFromSurface(renderer, spritesSurface);
+    if (!sprites) panic("Could not create texture", SDL_GetError());
 
-    SDL_Texture *gameSprites = loadTexture(renderer, "images/theme-jumpnbump.bmp");
-    if (!gameSprites) panic("Could not load game sprites", SDL_GetError());
+    SDL_Texture *font = SDL_CreateTextureFromSurface(renderer, fontSurface);
+    if (!font) panic("Could not create texture", SDL_GetError());
+
+    // At this point, everything we need is loaded to textures
+    SDL_FreeSurface(spritesSurface);
+    SDL_FreeSurface(fontSurface);
 
     // Tell the renderer to stretch the drawing if the window is resized
     SDL_RenderSetLogicalSize(renderer, windowW, windowH);
 
-    // Create a background texture with all the things that don't change from
+    // Create background textures with all the things that don't change from
     // frame to frame. This reduces the number of draw calls in the inner loop.
-    SDL_Texture *background = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, windowW, windowH);
-    if (!background) panic("Could not create background texture", SDL_GetError());
+    SDL_Texture *windowBackground = SDL_CreateTexture(
+            renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
+            windowW, windowH);
+    if (!windowBackground) panic("Could not create window background texture", SDL_GetError());
+
+    SDL_Texture *gameBackground = SDL_CreateTexture(
+            renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
+            gameW, gameH);
+    if (!gameBackground) panic("Could not create game background texture", SDL_GetError());
 
     {
-        SDL_SetRenderTarget(renderer, background);
+        SDL_SetRenderTarget(renderer, windowBackground);
 
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);;
         SDL_RenderClear(renderer);
-        SDL_RenderCopy(renderer, uiSprites, &titleSprite,      &titleDst);
-        SDL_RenderCopy(renderer, uiSprites, &scoreLabelSprite, &scoreLabelDst);
-        SDL_RenderCopy(renderer, uiSprites, &copyrightSprite,  &copyrightDst);
 
-        SDL_RenderSetClipRect(renderer, &gameDst);
+        draw_text_box(renderer, &titleDst);
+        draw_text(renderer, font, titleMsg, textColor, &titleDst);
+        draw_text(renderer, font, scoreLabelMsg, textColor, &scoreLabelDst);
+        draw_text(renderer, font, copyrightMsg, copyrightColor, &copyrightDst);
+
+        SDL_RenderPresent(renderer);
+        SDL_SetRenderTarget(renderer, NULL);
+    }
+
+    {
+        SDL_SetRenderTarget(renderer, gameBackground);
+
         for (int y = 0; y < FIELD_H; y++) {
             for (int x = 0; x < FIELD_W; x++) {
-                const SDL_Rect *sprite = ((x == 0) ? &LWallSprite : (x == FIELD_W-1) ? &RWallSprite : &skySprite);
-                const SDL_Rect spriteDst = { gameX + x*S, gameY + y*S, S, S };
-                SDL_RenderCopy(renderer, gameSprites, sprite, &spriteDst);
+                const SDL_Rect *src = ((x == 0) ? &LWallSprite : (x == FIELD_W-1) ? &RWallSprite : &skySprite);
+                const SDL_Rect dst = { x*S, y*S, S, S };
+                SDL_RenderCopy(renderer, sprites, src, &dst);
             }
         }
-        SDL_RenderSetClipRect(renderer, NULL);
 
         SDL_RenderPresent(renderer);
         SDL_SetRenderTarget(renderer, NULL);
@@ -677,17 +755,13 @@ int main()
 
         if (G.needsRepaint) {
 
-            SDL_RenderClear(renderer);
-            SDL_RenderCopy(renderer, background, NULL, NULL);
+            SDL_RenderCopy(renderer, windowBackground, NULL, NULL);
+            SDL_RenderCopy(renderer, gameBackground, NULL, &gameDst);
 
             {
-                // Score
-                int64_t s = G.score;
-                for (int i = NscoreDigits-1; i >= 0; i--) {
-                    int d = s % 10; s = s / 10;
-                    const SDL_Rect digitDst = { scoreDigitsX + i*FW, scoreY, FW, FH };
-                    SDL_RenderCopy(renderer, uiSprites, &digitSprites[d], &digitDst);
-                }
+                char scoreDigits[32];
+                sprintf(scoreDigits, " %010ld", G.score);
+                draw_text(renderer, font, scoreDigits, textColor, &scoreDigitsDst);
             }
 
             {
@@ -698,7 +772,7 @@ int main()
                     const Floor *fl = &G.floors[mod(G.scrollOffset - y, FIELD_H)];
                     for (int x = fl->left; x <= fl->right; x++) {
                         const SDL_Rect spriteDst = { gameX + x*S, gameY + y*S, S, S };
-                        SDL_RenderCopy(renderer, gameSprites, &floorSprite, &spriteDst);
+                        SDL_RenderCopy(renderer, sprites, &floorSprite, &spriteDst);
                     }
                 }
 
@@ -709,19 +783,21 @@ int main()
                 int sprite_index = (isFlying&1) << 2 | (isVariant&1) << 1 | (isRight&1) << 0;
 
                 const SDL_Rect heroDst = { gameX + G.x, gameY + G.y, R, R };
-                SDL_RenderCopy(renderer, gameSprites, &heroSprite[sprite_index], &heroDst);
+                SDL_RenderCopy(renderer, sprites, &heroSprite[sprite_index], &heroDst);
 
                 SDL_RenderSetClipRect(renderer, NULL);
             }
 
             switch (G.state) {
                 case STATE_GAMEOVER:
-                    SDL_RenderCopy(renderer, uiSprites, &gameOverSprite, &gameOverDst);
+                    draw_text_box(renderer, &gameOverDst);
+                    draw_text(renderer, font, gameOverMsg, textColor, &gameOverDst);
                     G.needsRepaint = false;
                     break;
 
                 case STATE_PAUSED:
-                    SDL_RenderCopy(renderer, uiSprites, &pauseSprite, &pauseDst);
+                    draw_text_box(renderer, &pauseDst);
+                    draw_text(renderer, font, pauseMsg, textColor, &pauseDst);
                     G.needsRepaint = false;
                     break;
 
@@ -748,14 +824,14 @@ int main()
 
 quit:
 
-    SDL_DestroyTexture(background);
-    SDL_DestroyTexture(gameSprites);
-    SDL_DestroyTexture(uiSprites);
+    SDL_DestroyTexture(sprites);
+    SDL_DestroyTexture(font);
+    SDL_DestroyTexture(gameBackground);
+    SDL_DestroyTexture(windowBackground);
+
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
 
-    TTF_Quit();
     SDL_Quit();
-
     return 0;
 }
