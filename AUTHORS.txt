@@ -1,0 +1,18 @@
+Original Xjump code:
+
+    Tatsuya Kudoh(CDR/TK)
+    Masato Taruishi
+
+Xjump package for Debian:
+
+    Masato Taruishi
+    Joshua Kwan
+
+Jump and Bump icons:
+
+    Andreas Brynervall
+    Martin Magnusson
+
+SDL port:
+
+    Hugo Gualandi
