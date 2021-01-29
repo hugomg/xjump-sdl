@@ -660,9 +660,6 @@ int main()
     SDL_FreeSurface(spritesSurface);
     SDL_FreeSurface(fontSurface);
 
-    // Tell the renderer to stretch the drawing if the window is resized
-    SDL_RenderSetLogicalSize(renderer, windowW, windowH);
-
     // Create background textures with all the things that don't change from
     // frame to frame. This reduces the number of draw calls in the inner loop.
     SDL_Texture *windowBackground = SDL_CreateTexture(
@@ -704,6 +701,9 @@ int main()
         SDL_RenderPresent(renderer);
         SDL_SetRenderTarget(renderer, NULL);
     }
+
+    // Tell the renderer to stretch the drawing if the window is resized
+    SDL_RenderSetLogicalSize(renderer, windowW, windowH);
 
     while (1) {
 
