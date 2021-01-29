@@ -594,8 +594,8 @@ int main()
     const int gameW = S * FIELD_W;
     const int gameH = S * FIELD_H;
 
-    const int scoreDigitsW = (NscoreDigits + 1) * FW;
-    const int scoreW = scoreLabelW + scoreDigitsW;
+    const int scoreDigitsW = NscoreDigits * FW;
+    const int scoreW = scoreLabelW + FW + scoreDigitsW;
 
     const int windowW = windowMarginLeft + gameW + windowMarginRight;
     const int windowH = windowMarginTop + 3*windowMarginInner + textBoxH + 2*FH + + gameH + windowMarginBottom;
@@ -613,7 +613,7 @@ int main()
     const int copyrightY = gameY + gameH + windowMarginInner;
 
     const int scoreLabelX  = scoreX;
-    const int scoreDigitsX = scoreX + scoreLabelW;
+    const int scoreDigitsX = scoreX + scoreLabelW + FW;
 
     const int gameOverX = gameX + (gameW - gameOverW)/2;
     const int gameOverY = gameY + (gameH - FH)*2/5;
@@ -776,7 +776,7 @@ int main()
 
             {
                 char scoreDigits[32];
-                sprintf(scoreDigits, " %010ld", G.score);
+                snprintf(scoreDigits, sizeof(scoreDigits), "%010ld", G.score);
                 draw_text(renderer, font, scoreDigits, textColor, &scoreDigitsDst);
             }
 
