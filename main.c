@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/random.h>
 
 //
@@ -531,59 +532,11 @@ static const int windowMarginRight  = windowMarginLeft;
 
 static const int NscoreDigits = 10;
 
-// Widths and Heights
-
-static const char titleMsg[]      = "FALLING TOWER ver 3.0";
-static const char scoreLabelMsg[] = "Floor";
-static const char copyrightMsg[]  = "(C) 1997 ROYALPANDA";
-static const char gameOverMsg[]   = "Game Over";
-static const char pauseMsg[]      = "Pause";
-
-static const int titleW      = FW * (sizeof(titleMsg) - 1);
-static const int scoreLabelW = FW * (sizeof(scoreLabelMsg) - 1);
-static const int copyrightW  = FW * (sizeof(copyrightMsg) - 1);
-static const int gameOverW   = FW * (sizeof(gameOverMsg) - 1);
-static const int pauseW      = FW * (sizeof(pauseMsg) - 1);
-
-static const int textBoxH = FH + boxBorder + boxPaddingLeft + boxPaddingRight  + boxBorder;
-
-static const int gameW = S * FIELD_W;
-static const int gameH = S * FIELD_H;
-
-static const int scoreDigitsW = (NscoreDigits + 1) * FW;
-static const int scoreW = scoreLabelW + scoreDigitsW;
-
-static const int windowW = windowMarginLeft + gameW + windowMarginRight;
-static const int windowH = windowMarginTop + 3*windowMarginInner + textBoxH + 2*FH + + gameH + windowMarginBottom;
-
-// Screen positions
-
-static const int titleX     = (windowW - titleW)/2;
-static const int scoreX     = (windowW - scoreW)/2;
-static const int gameX      = (windowW - gameW)/2;
-static const int copyrightX = (windowW - copyrightW)/2;
-
-static const int titleY     = windowMarginTop + boxBorder + boxPaddingTop;
-static const int scoreY     = titleY + FH + boxPaddingBottom + boxBorder + windowMarginInner;
-static const int gameY      = scoreY + FH + windowMarginInner;
-static const int copyrightY = gameY + gameH + windowMarginInner;
-
-static const int scoreLabelX  = scoreX;
-static const int scoreDigitsX = scoreX + scoreLabelW;
-
-static const int gameOverX = gameX + (gameW - gameOverW)/2;
-static const int gameOverY = gameY + (gameH - FH)*2/5;
-
-static const int pauseX = gameX + (gameW - pauseW)/2;
-static const int pauseY = gameY + (gameH - FH)*2/5;
-
-static const SDL_Rect gameDst        = { gameX, gameY, gameW, gameH };
-static const SDL_Rect titleDst       = { titleX, titleY, titleW, FH };
-static const SDL_Rect scoreLabelDst  = { scoreLabelX, scoreY, scoreLabelW, FH };
-static const SDL_Rect scoreDigitsDst = { scoreDigitsX, scoreY, scoreDigitsW, FH };
-static const SDL_Rect copyrightDst   = { copyrightX, copyrightY, copyrightW, FH };
-static const SDL_Rect gameOverDst    = { gameOverX, gameOverY, gameOverW, FH };
-static const SDL_Rect pauseDst       = { pauseX, pauseY, pauseW, FH };
+static const char *titleMsg      = "FALLING TOWER ver 3.0";
+static const char *scoreLabelMsg = "Floor";
+static const char *copyrightMsg  = "(C) 1997 ROYALPANDA";
+static const char *gameOverMsg   = "Game Over";
+static const char *pauseMsg      = "Pause";
 
 // Game spritesheet
 
@@ -602,13 +555,62 @@ static const SDL_Rect heroSprite[8] = {
     { 3*R, 1*R, R, R}, // Fall R
 };
 
-
-//
-// Application state
-// -----------------
-
 int main()
 {
+    pcg32_init();
+    init_input();
+    init_game();
+
+    // Widths and Heights
+
+    const int titleW      = FW * strlen(titleMsg);
+    const int scoreLabelW = FW * strlen(scoreLabelMsg);
+    const int copyrightW  = FW * strlen(copyrightMsg);
+    const int gameOverW   = FW * strlen(gameOverMsg);
+    const int pauseW      = FW * strlen(pauseMsg);
+
+    const int textBoxH = FH + boxBorder + boxPaddingLeft + boxPaddingRight  + boxBorder;
+
+    const int gameW = S * FIELD_W;
+    const int gameH = S * FIELD_H;
+
+    const int scoreDigitsW = (NscoreDigits + 1) * FW;
+    const int scoreW = scoreLabelW + scoreDigitsW;
+
+    const int windowW = windowMarginLeft + gameW + windowMarginRight;
+    const int windowH = windowMarginTop + 3*windowMarginInner + textBoxH + 2*FH + + gameH + windowMarginBottom;
+
+    // Screen positions
+
+    const int titleX     = (windowW - titleW)/2;
+    const int scoreX     = (windowW - scoreW)/2;
+    const int gameX      = (windowW - gameW)/2;
+    const int copyrightX = (windowW - copyrightW)/2;
+
+    const int titleY     = windowMarginTop + boxBorder + boxPaddingTop;
+    const int scoreY     = titleY + FH + boxPaddingBottom + boxBorder + windowMarginInner;
+    const int gameY      = scoreY + FH + windowMarginInner;
+    const int copyrightY = gameY + gameH + windowMarginInner;
+
+    const int scoreLabelX  = scoreX;
+    const int scoreDigitsX = scoreX + scoreLabelW;
+
+    const int gameOverX = gameX + (gameW - gameOverW)/2;
+    const int gameOverY = gameY + (gameH - FH)*2/5;
+
+    const int pauseX = gameX + (gameW - pauseW)/2;
+    const int pauseY = gameY + (gameH - FH)*2/5;
+
+    const SDL_Rect titleDst       = { titleX, titleY, titleW, FH };
+    const SDL_Rect scoreLabelDst  = { scoreLabelX, scoreY, scoreLabelW, FH };
+    const SDL_Rect scoreDigitsDst = { scoreDigitsX, scoreY, scoreDigitsW, FH };
+    const SDL_Rect copyrightDst   = { copyrightX, copyrightY, copyrightW, FH };
+    const SDL_Rect gameOverDst    = { gameOverX, gameOverY, gameOverW, FH };
+    const SDL_Rect pauseDst       = { pauseX, pauseY, pauseW, FH };
+    const SDL_Rect gameDst        = { gameX, gameY, gameW, gameH };
+
+    // Load SDL resources
+
     if (0 != SDL_Init(SDL_INIT_VIDEO)) panic("Could not initialize SDL", SDL_GetError());
 
     SDL_Surface *spritesSurface = SDL_LoadBMP("images/theme-jumpnbump.bmp");
@@ -684,10 +686,6 @@ int main()
         SDL_RenderPresent(renderer);
         SDL_SetRenderTarget(renderer, NULL);
     }
-
-    pcg32_init();
-    init_input();
-    init_game();
 
     while (1) {
 
