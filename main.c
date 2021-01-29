@@ -39,7 +39,7 @@ static int mod(int n, int m)
 static void panic(const char *what, const char *fullError)
 {
     if (fullError == NULL) fullError = "";
-    fprintf(stderr, "Fatal error! %s. %s\n", what, fullError);
+    fprintf(stderr, "Internal error! %s. %s\n", what, fullError);
     exit(1);
 }
 
@@ -612,6 +612,7 @@ int main()
     // Load SDL resources
 
     if (0 != SDL_Init(SDL_INIT_VIDEO)) panic("Could not initialize SDL", SDL_GetError());
+    atexit(SDL_Quit);
 
     SDL_Surface *spritesSurface = SDL_LoadBMP("images/theme-jumpnbump.bmp");
     if (!spritesSurface) panic("Could not sprite file ", SDL_GetError());
@@ -821,15 +822,5 @@ int main()
     }
 
 quit:
-
-    SDL_DestroyTexture(sprites);
-    SDL_DestroyTexture(font);
-    SDL_DestroyTexture(gameBackground);
-    SDL_DestroyTexture(windowBackground);
-
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-
-    SDL_Quit();
     return 0;
 }
