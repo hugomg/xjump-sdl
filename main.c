@@ -572,6 +572,11 @@ static const SDL_Rect heroSprite[8] = {
 
 int main()
 {
+    // Initialize subsystems
+
+    if (0 != SDL_Init(SDL_INIT_VIDEO)) panic("Could not initialize SDL", SDL_GetError());
+    atexit(SDL_Quit);
+
     pcg32_init();
     init_input();
     init_game();
@@ -625,9 +630,6 @@ int main()
     const SDL_Rect gameDst        = { gameX, gameY, gameW, gameH };
 
     // Load SDL resources
-
-    if (0 != SDL_Init(SDL_INIT_VIDEO)) panic("Could not initialize SDL", SDL_GetError());
-    atexit(SDL_Quit);
 
     SDL_Surface *spritesSurface = SDL_LoadBMP("images/theme-jumpnbump.bmp");
     if (!spritesSurface) panic("Could not sprite file ", SDL_GetError());
