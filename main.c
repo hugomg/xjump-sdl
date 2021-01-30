@@ -20,11 +20,16 @@
 #include <assert.h>
 #include <errno.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+#include <unistd.h>
 #include <sys/random.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 //
 // Helper functions
@@ -105,8 +110,93 @@ static uint32_t rnd(uint32_t a, uint32_t b)
 }
 
 //
+// Highscores
+// ----------
+//
+
+typedef struct {
+    int64_t score;
+    uid_t   player;
+    time_t  time;
+} Highscore;
+
+static uid_t   myUid;
+static char highscorePath[PATH_MAX];
+Highscore highscore;
+
+static void highscore_init()
+{
+    myUid = getuid();
+    highscore.score  = -1;
+    highscore.player = myUid;
+    highscore.time   = 0;
+
+    // Locate the local highscore file, following the XDG spec
+    // https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
+    char dirPath[PATH_MAX];
+    const char *dirName = "xjump";
+    const char *HOME          = getenv("HOME");
+    const char *XDG_DATA_HOME = getenv("XDG_DATA_HOME");
+    if (XDG_DATA_HOME) {
+        snprintf(dirPath, sizeof(dirPath), "%s/%s", XDG_DATA_HOME, dirName);
+    } else if (HOME) {
+        snprintf(dirPath, sizeof(dirPath), "%s/.local/share/%s", HOME, dirName);
+    } else {
+        panic("Cannot locate local xjump directory", "$HOME environment variable is not set.");
+    }
+
+    if (0 != mkdir(dirPath, 0755) && errno != EEXIST) {
+        panic("Cannot create local xjump directory", strerror(errno));
+    }
+
+    const char *fileName = "highscores";
+    int size = snprintf(highscorePath, sizeof(highscorePath), "%s/%s", dirPath, fileName);
+    if (size < 0 || size >= (int)sizeof(highscorePath)) {
+        panic("Highscore file name is too long", NULL);
+    }
+
+    // Check if the highscore file is writable. If there is a problem it is
+    // better to warn the user now than after a long play session.
+    FILE *file = fopen(highscorePath, "a+");
+    if (!file) panic("Cannot write to highscore file", strerror(errno));
+    fclose(file);
+}
+
+static void highscore_read()
+{
+    FILE *file = fopen(highscorePath, "r");
+    if (!file) panic("Cannot open highscore file", strerror(errno));
+
+    Highscore h;
+    int nr = fscanf(file, "%ld %u %ld", &h.score, &h.player, &h.time);
+    if (nr == 3) {
+        highscore = h;
+    }
+
+    fclose(file);
+}
+
+static void highscore_update(int64_t newscore)
+{
+    highscore_read();
+    if (newscore > highscore.score) {
+        highscore.score  = newscore;
+        highscore.player = myUid;
+        highscore.time   = time(NULL);
+
+        FILE *file = fopen(highscorePath, "w");
+        if (!file) panic("Cannot open highscore file", strerror(errno));
+
+        Highscore h = highscore;
+        fprintf(file, "%ld %u %ld", h.score, h.player, h.time);
+
+        fclose(file);
+    }
+}
+
+//
 // Joystick state
-// ---------------
+// --------------
 
 // This component keeps track of the "joystick" state.
 // If both LEFT and RIGHT a pressed at the same time, the most recent one wins.
@@ -212,6 +302,7 @@ typedef enum {
     STATE_RUNNING,
     STATE_PAUSED,
     STATE_GAMEOVER,
+    STATE_HIGHSCORES,
 } GameState;
 
 typedef struct {
@@ -223,7 +314,7 @@ static struct {
 
     int64_t score;
 
-    // Gameover / Pause
+    // Gameover / Pause / Highscores
     GameState state;
     int needsRepaint;  // CPU optimization: don't redraw static screens.
     int gameOverCount; // How many frames since we hit gameover
@@ -338,16 +429,22 @@ static bool isStanding()
 static void update_game()
 {
     if (G.state == STATE_GAMEOVER) {
-        G.gameOverCount++;
+        if (++G.gameOverCount >= 80) {
+            G.state = STATE_HIGHSCORES;
+        }
         return;
-
     }
 
     if (G.state == STATE_PAUSED) {
         return;
     }
 
-    // else: state == STATE_RUNNING;
+    if (G.state == STATE_HIGHSCORES) {
+        return;
+    }
+
+    // else
+    assert(G.state == STATE_RUNNING);
 
     G.needsRepaint = true;
 
@@ -368,6 +465,7 @@ static void update_game()
 
     if (G.y >= S*FIELD_H) {
         G.state = STATE_GAMEOVER;
+        highscore_update(G.score);
         return;
     }
 
@@ -452,10 +550,12 @@ static void update_game()
 // Colors
 //
 
-static const SDL_Color textColor      = { 255, 255, 255, 255 };
-static const SDL_Color copyrightColor = {   0, 255,   0, 255 };
-static const SDL_Color borderColor    = {   0,   0, 128, 255 };
-static const SDL_Color boxColor       = {   0,   0, 255, 255 };
+static const SDL_Color backgroundColor  = {   0,   0,   0, 255 };
+static const SDL_Color textColor        = { 255, 255, 255, 255 };
+static const SDL_Color copyrightColor   = {   0, 255,   0, 255 };
+static const SDL_Color boxBorderColor   = {   0,   0, 128, 255 };
+static const SDL_Color boxColor         = {   0,   0, 255, 255 };
+static const SDL_Color scoreBorderColor = { 255, 255, 255, 255 };
 
 //
 // Text rendering
@@ -525,10 +625,10 @@ static void draw_text_box(SDL_Renderer *renderer, const SDL_Rect *content)
        padding.h + 2*boxBorder,
     };
 
-    SDL_SetRenderDrawColor(renderer, borderColor.r, borderColor.g, borderColor.b, borderColor.a);
+    SDL_SetRenderDrawColor(renderer, boxBorderColor.r, boxBorderColor.g, boxBorderColor.b, boxBorderColor.a);
     SDL_RenderFillRect(renderer, &border);
 
-    SDL_SetRenderDrawColor(renderer, borderColor.r, boxColor.g, boxColor.b, boxColor.a);
+    SDL_SetRenderDrawColor(renderer, boxColor.r, boxColor.g, boxColor.b, boxColor.a);
     SDL_RenderFillRect(renderer, &padding);
 }
 
@@ -545,13 +645,14 @@ static const int windowMarginInner = 32;
 static const int windowMarginBottom = windowMarginTop;
 static const int windowMarginRight  = windowMarginLeft;
 
-static const int NscoreDigits = 10;
-
 static const char *titleMsg      = "FALLING TOWER ver 3.0";
 static const char *scoreLabelMsg = "Floor";
 static const char *copyrightMsg  = "(C) 1997 ROYALPANDA";
 static const char *gameOverMsg   = "Game Over";
 static const char *pauseMsg      = "Pause";
+static const char *highscoreMsg  = "High Score";
+
+static const int NscoreDigits = 10;
 
 // Game spritesheet
 
@@ -574,10 +675,12 @@ int main()
 {
     // Initialize subsystems
 
-    if (0 != SDL_Init(SDL_INIT_VIDEO)) panic("Could not initialize SDL", SDL_GetError());
+    if (0 != SDL_Init(SDL_INIT_VIDEO))
+        panic("Could not initialize SDL", SDL_GetError());
     atexit(SDL_Quit);
 
     pcg32_init();
+    highscore_init();
     init_input();
     init_game();
 
@@ -636,7 +739,8 @@ int main()
 
     SDL_Surface *fontSurface = SDL_LoadBMP("images/ui-font.bmp");
     if (!fontSurface) panic("Could not load font file", SDL_GetError());
-    SDL_SetColorKey(fontSurface, SDL_TRUE, SDL_MapRGB(fontSurface->format, 0, 0, 0)); // (make background transparent)
+    // Make background transparent
+    SDL_SetColorKey(fontSurface, SDL_TRUE, SDL_MapRGB(fontSurface->format, 0, 0, 0));
 
     SDL_Window *window = SDL_CreateWindow(
         /*title*/ "xjump",
@@ -675,7 +779,7 @@ int main()
     {
         SDL_SetRenderTarget(renderer, windowBackground);
 
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);;
+        SDL_SetRenderDrawColor(renderer, backgroundColor.r,  backgroundColor.g, backgroundColor.b, backgroundColor.a);
         SDL_RenderClear(renderer);
 
         draw_text_box(renderer, &titleDst);
@@ -735,12 +839,18 @@ int main()
                                 G.state = STATE_PAUSED;
                             }
                             break;
-
+                            
                         case STATE_PAUSED:
                             G.state = STATE_RUNNING;
                             break;
 
                         case STATE_GAMEOVER:
+                            G.state = STATE_HIGHSCORES;
+                            break;
+
+                        case STATE_HIGHSCORES:
+                            init_game();
+                            init_input();
                             break;
                     }
                     break;
@@ -761,26 +871,39 @@ int main()
         //
 
         update_game();
-        if (G.state == STATE_GAMEOVER && G.gameOverCount >= 80) {
-            goto quit; // TODO highscores
-        }
 
         //
         // Draw
         //
 
         if (G.needsRepaint) {
-
             SDL_RenderCopy(renderer, windowBackground, NULL, NULL);
-            SDL_RenderCopy(renderer, gameBackground, NULL, &gameDst);
 
-            {
-                char scoreDigits[32];
-                snprintf(scoreDigits, sizeof(scoreDigits), "%010ld", G.score);
-                draw_text(renderer, font, scoreDigits, textColor, &scoreDigitsDst);
-            }
+            char scoreDigits[32];
+            snprintf(scoreDigits, sizeof(scoreDigits), "%010ld", G.score);
+            draw_text(renderer, font, scoreDigits, textColor, &scoreDigitsDst);
 
-            {
+            if (G.state == STATE_HIGHSCORES)  {
+                char line[32];
+                snprintf(line, sizeof(line), "%s %6ld", highscoreMsg, highscore.score);
+
+                int highscoreW = FW * strlen(line);
+                int highscoreH = FH;
+                int highscoreX = gameX + (gameW - highscoreW)/2;
+                int highscoreY = gameY + (gameH - highscoreH)/2;
+
+                SDL_SetRenderDrawColor(renderer, scoreBorderColor.r,  scoreBorderColor.g, scoreBorderColor.b, scoreBorderColor.a);
+                SDL_RenderFillRect(renderer, &gameDst);
+
+                const SDL_Rect innerRect = { gameX+1, gameY+1, gameW-2, gameH-2 };
+                SDL_SetRenderDrawColor(renderer, backgroundColor.r,  backgroundColor.g, backgroundColor.b, backgroundColor.a);
+                SDL_RenderFillRect(renderer, &innerRect);
+
+                const SDL_Rect dst = { highscoreX, highscoreY, highscoreW, highscoreH };
+                draw_text(renderer, font, line, textColor, &dst);
+
+            } else {
+                SDL_RenderCopy(renderer, gameBackground, NULL, &gameDst);
                 SDL_RenderSetClipRect(renderer, &gameDst);
 
                 // Floors
@@ -808,12 +931,15 @@ int main()
                 case STATE_GAMEOVER:
                     draw_text_box(renderer, &gameOverDst);
                     draw_text(renderer, font, gameOverMsg, textColor, &gameOverDst);
-                    G.needsRepaint = false;
                     break;
 
                 case STATE_PAUSED:
                     draw_text_box(renderer, &pauseDst);
                     draw_text(renderer, font, pauseMsg, textColor, &pauseDst);
+                    G.needsRepaint = false;
+                    break;
+
+                case STATE_HIGHSCORES:
                     G.needsRepaint = false;
                     break;
 
