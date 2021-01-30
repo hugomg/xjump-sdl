@@ -31,6 +31,10 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#ifndef IMAGEDIR
+#error "Please compile with -DIMAGEDIR"
+#endif
+
 //
 // Helper functions
 // ----------------
@@ -50,6 +54,11 @@ static int mod(int n, int m)
     assert(m > 0);
     int r = n % m;
     return (r >= 0 ? r : r + m);
+}
+
+static bool isNullOrEmpty(const char *s)
+{
+    return (s == NULL) || (*s == '\0');
 }
 
 //
@@ -137,14 +146,15 @@ static void highscore_init()
     const char *dirName = "xjump";
     const char *HOME          = getenv("HOME");
     const char *XDG_DATA_HOME = getenv("XDG_DATA_HOME");
-    if (XDG_DATA_HOME) {
+    if (!isNullOrEmpty(XDG_DATA_HOME)) {
         snprintf(dirPath, sizeof(dirPath), "%s/%s", XDG_DATA_HOME, dirName);
-    } else if (HOME) {
+    } else if (!isNullOrEmpty(HOME)) {
         snprintf(dirPath, sizeof(dirPath), "%s/.local/share/%s", HOME, dirName);
     } else {
         panic("Cannot locate local xjump directory", "$HOME environment variable is not set.");
     }
 
+    // Ensure that the containing dir exists...
     if (0 != mkdir(dirPath, 0755) && errno != EEXIST) {
         panic("Cannot create local xjump directory", strerror(errno));
     }
@@ -734,10 +744,10 @@ int main()
 
     // Load SDL resources
 
-    SDL_Surface *spritesSurface = SDL_LoadBMP("images/theme-jumpnbump.bmp");
+    SDL_Surface *spritesSurface = SDL_LoadBMP(IMAGEDIR "/theme-jumpnbump.bmp");
     if (!spritesSurface) panic("Could not sprite file ", SDL_GetError());
 
-    SDL_Surface *fontSurface = SDL_LoadBMP("images/ui-font.bmp");
+    SDL_Surface *fontSurface = SDL_LoadBMP(IMAGEDIR "/ui-font.bmp");
     if (!fontSurface) panic("Could not load font file", SDL_GetError());
     // Make background transparent
     SDL_SetColorKey(fontSurface, SDL_TRUE, SDL_MapRGB(fontSurface->format, 0, 0, 0));
