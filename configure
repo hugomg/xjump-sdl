@@ -102,10 +102,13 @@ fi
 # information will be included in the config.h, we have to figure out the
 # absolute paths to them right now. We don't want to give the impression that
 # the user can override the prefix later with `make prefix=blah`.
-[ -n "$prefix"  ] || prefix=$(readlink -f "/usr/local")
-[ -n "$bindir"  ] || bindir=$(readlink -f "$prefix/bin")
-[ -n "$datadir" ] || datadir=$(readlink -f "$prefix/datadir")
+[ -n "$prefix"  ] || prefix="/usr/local"
+[ -n "$bindir"  ] || bindir="$prefix/bin"
+[ -n "$datadir" ] || datadir="$prefix/datadir"
 
+prefix=$(readlink -f "$prefix")
+bindir=$(readlink -f "$bindir")
+datadir=$(readlink -f "$datadir")
 
 # Finally, store the information where the makefile can see it and tell the
 # user where things are going to be installed.
