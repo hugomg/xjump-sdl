@@ -1,30 +1,39 @@
 #!/bin/sh
 
+# This is the canonical specification of the Xjump version.
+VERSION=3.0
+
 print_usage() {
     cat <<EOF
-Usage: $0 [OPTION]... [VAR=VALUE]
+Usage: $0 [OPTION]... [VAR=VALUE]...
 
+Configure the installation location and compilation options for Xjump.
+By default, \`make install' will install all the files under /usr/local/bin and
+/usr/local/share. Use the \`--prefix' flag to choose a different location.
 Defaults for the options are specified in brackets.
 
+To assign environment variables (e.g., CC, CFLAGS...), specify them as
+VAR=VALUE. See below for descriptions of some of the useful variables.
+
 General:
-    -h, --help                   display this help and exit
+    -h, --help         display this help and exit
 
 Instalation directories:
-    --prefix=PREFIX              root  directory [/usr/local]
+    --prefix=PREFIX    root installation directory [/usr/local]
 
-    --bindir=DIR                 executable files [PREFIX/bin]
-    --datadir=DIR                game images [PREFIX/share]
+    --bindir=DIR       where to install the game executable [PREFIX/bin]
+    --datadir=DIR      where to install the game sprites [PREFIX/share]
 
 Compilation variables:
-    CC          C compiler command
-    CFLAGS      C compiler flags (-O2 -Wall ...)
-    CPPFLAGS    C preprocessor flags (-I<dir> ...)
+    CC                 C compiler command
+    CFLAGS             C compiler flags (-O2 -Wall ...)
+    CPPFLAGS           C preprocessor flags (-I<dir> ...)
 
-    LDFLAGS     Linker flags (-L<dir> ...)
-    LIBS        Libraries (-l<library> ...)
+    LDFLAGS            Linker flags (-L<dir> ...)
+    LIBS               Libraries (-l<library> ...)
 
-    SDL2_CFLAGS Additional flags for compiling SDL2 applications
-    SDL2_LIBS   Additional flags for linking with SDL2
+    SDL2_CFLAGS        Additional flags for compiling with SDL2
+    SDL2_LIBS          Additional flags for linking with SDL2
 EOF
     exit 0
 }
@@ -34,19 +43,22 @@ add_kv() {
 }
 
 printf '' > config.mk.new
+add_kv "VERSION=$VERSION"
 
 for arg in "$@"; do
-    arg_value="${arg#*=}"
+    value="${arg#*=}"
     case "$arg" in
         -h|--help)   rm config.mk.new; print_usage;;
-        --prefix=*)  add_kv "prefix=${arg_value}";;
-        --bindir=*)  add_kv "bindir=${arg_value}";;
-        --datadir=*) add_kv "datadir=${arg_value}";;
+        --prefix=*)  add_kv "prefix=$value";;
+        --bindir=*)  add_kv "bindir=$value";;
+        --datadir=*) add_kv "datadir=$value";;
         *=*)         add_kv "$arg";;
     esac
 done
 
 mv config.mk.new config.mk
 
-echo "Configuration saved to config.mk."
-echo "Run \`make options\` to review it."
+echo "Configuration options saved to config.mk"
+echo "Run \`make options\` to review them."
+echo
+make options
