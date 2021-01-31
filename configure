@@ -1,0 +1,52 @@
+#!/bin/sh
+
+print_usage() {
+    cat <<EOF
+Usage: $0 [OPTION]... [VAR=VALUE]
+
+Defaults for the options are specified in brackets.
+
+General:
+    -h, --help                   display this help and exit
+
+Instalation directories:
+    --prefix=PREFIX              root  directory [/usr/local]
+
+    --bindir=DIR                 executable files [PREFIX/bin]
+    --datadir=DIR                game images [PREFIX/share]
+
+Compilation variables:
+    CC          C compiler command
+    CFLAGS      C compiler flags (-O2 -Wall ...)
+    CPPFLAGS    C preprocessor flags (-I<dir> ...)
+
+    LDFLAGS     Linker flags (-L<dir> ...)
+    LIBS        Libraries (-l<library> ...)
+
+    SDL2_CFLAGS Additional flags for compiling SDL2 applications
+    SDL2_LIBS   Additional flags for linking with SDL2
+EOF
+    exit 0
+}
+
+add_kv() {
+    printf "%s\n" "$1" >> config.mk.new
+}
+
+printf '' > config.mk.new
+
+for arg in "$@"; do
+    arg_value="${arg#*=}"
+    case "$arg" in
+        -h|--help)   rm config.mk.new; print_usage;;
+        --prefix=*)  add_kv "prefix=${arg_value}";;
+        --bindir=*)  add_kv "bindir=${arg_value}";;
+        --datadir=*) add_kv "datadir=${arg_value}";;
+        *=*)         add_kv "$arg";;
+    esac
+done
+
+mv config.mk.new config.mk
+
+echo "Configuration saved to config.mk."
+echo "Run \`make options\` to review it."

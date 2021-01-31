@@ -31,9 +31,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#ifndef IMAGEDIR
-#error "Please compile with -DIMAGEDIR"
-#endif
+#include "config.h"
 
 //
 // Helper functions
@@ -744,10 +742,10 @@ int main()
 
     // Load SDL resources
 
-    SDL_Surface *spritesSurface = SDL_LoadBMP(IMAGEDIR "/theme-jumpnbump.bmp");
+    SDL_Surface *spritesSurface = SDL_LoadBMP(XJUMP_DATADIR "/xjump/theme-jumpnbump.bmp");
     if (!spritesSurface) panic("Could not sprite file ", SDL_GetError());
 
-    SDL_Surface *fontSurface = SDL_LoadBMP(IMAGEDIR "/ui-font.bmp");
+    SDL_Surface *fontSurface = SDL_LoadBMP(XJUMP_DATADIR "/xjump/ui-font.bmp");
     if (!fontSurface) panic("Could not load font file", SDL_GetError());
     // Make background transparent
     SDL_SetColorKey(fontSurface, SDL_TRUE, SDL_MapRGB(fontSurface->format, 0, 0, 0));

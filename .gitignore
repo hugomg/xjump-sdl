@@ -1,2 +1,4 @@
 xjump
 *.o
+config.h
+config.mk

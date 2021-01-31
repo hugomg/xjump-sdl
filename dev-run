@@ -1,7 +1,3 @@
 #!/bin/sh
 
-# Helper script to compile and run the development build.
-# Remember to `make clean` if you want to do a system install
-# afterwards.
-
-make IMAGEDIR="$(pwd)"/images && ./xjump
+make && make install && ./build/bin/xjump
