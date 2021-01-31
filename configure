@@ -75,8 +75,8 @@ for arg in "$@"; do
         --datadir=*) datadir=$value;;
         --*) error "Unrecognized option $arg";;
         *=*)
-            line="${key} = $(escape_make "$value")${nl}"
-            variables="${variables}${line}"
+            line="${key} = $(escape_make "$value")"
+            variables="${variables}${nl}${line}"
             if [ "$key" = "SDL_CFLAGS" ]; then set_sdl_cflags=yes; fi
             if [ "$key" = "SDL_LIBS" ];   then set_sdl_libs=yes; fi
             ;;
@@ -114,8 +114,7 @@ cat > config.mk <<EOF
 version = $(escape_make "$version")
 prefix  = $(escape_make "$prefix")
 bindir  = $(escape_make "$bindir")
-datadir = $(escape_make "$datadir")
-$variables
+datadir = $(escape_make "$datadir")$variables
 EOF
 
 cat > config.h <<EOF
@@ -130,8 +129,7 @@ Run \`make\` and \`sudo make install\` to continue the installation.
 
 Xjump will be installed to        : ${prefix}
 Xjump will install executables in : ${bindir}
-Xjump will install data files in  : ${datadir}
-$variables
+Xjump will install data files in  : ${datadir}$variables
 EOF
 
 exit 0
