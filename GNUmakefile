@@ -28,7 +28,7 @@ clean:
 distclean: clean
 	rm -rf config.h config.mk
 
-install: all
+install:
 	$(INSTALL_PROGRAM) -D xjump $(DESTDIR)$(bindir)/xjump
 	$(INSTALL_DATA) -D images/ui-font.bmp         $(DESTDIR)$(datadir)/xjump/ui-font.bmp
 	$(INSTALL_DATA) -D images/theme-jumpnbump.bmp $(DESTDIR)$(datadir)/xjump/theme-jumpnbump.bmp
