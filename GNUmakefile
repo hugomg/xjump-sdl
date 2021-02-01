@@ -44,10 +44,10 @@ uninstall:
 # Compilation
 # -----------
 
-xjump: main.o
+xjump: xjump.o
 	$(CC) $(LDFLAGS) $< $(SDL2_LIBS) $(LIBS) -o $@
 
-main.o: main.c config.h
+xjump.o: xjump.c config.h
 	$(CC) $(CPPFLAGS) $(SDL2_CFLAGS) $(CFLAGS) -c $< -o $@
 
 config.mk:
