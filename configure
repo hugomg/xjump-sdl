@@ -172,9 +172,9 @@ cat <<EOF
 Configuration sucessful.
 Run \`make\` and \`sudo make install\` to continue the installation.
 
-Xjump will be installed to        : ${prefix}
-Xjump will install executables in : ${bindir}
-Xjump will install data files in  : ${datadir}$variables
+Xjump will be installed to       : ${prefix}
+Xjump will install executables in: ${bindir}
+Xjump will install data files in : ${datadir}$variables
 EOF
 
 exit 0
