@@ -653,7 +653,7 @@ static const int windowMarginInner = 32;
 static const int windowMarginBottom = windowMarginTop;
 static const int windowMarginRight  = windowMarginLeft;
 
-static const char *titleMsg      = "FALLING TOWER ver 3.0";
+static const char *titleMsg      = "FALLING TOWER ver " XJUMP_VERSION;
 static const char *scoreLabelMsg = "Floor";
 static const char *copyrightMsg  = "(C) 1997 ROYALPANDA";
 static const char *gameOverMsg   = "Game Over";
