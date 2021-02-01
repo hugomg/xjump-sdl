@@ -6,11 +6,6 @@ version='3.0'
 # Functions
 #
 
-error() {
-    echo >&2 "$1"
-    exit 1
-}
-
 usage() {
     cat <<EOF
 Usage: $0 [OPTION]... [VAR=VALUE]...
@@ -26,6 +21,7 @@ to determine the default value for these variables.
 
 General:
     -h, --help         display this help and exit
+    -v, --version      display version information and exit
 
 Instalation directories:
     --prefix=PREFIX    root installation directory [/usr/local]
@@ -79,17 +75,45 @@ prefix=
 bindir=
 datadir=
 variables=
+set_prefix=no
+set_bindir=no
+set_datadir=no
 set_sdl_cflags=no
 set_sdl_libs=no
 for arg in "$@"; do
     key="${arg%%=*}"
     value="${arg#*=}"
     case "$arg" in
-        -h|--help)   usage; exit 0;;
-        --prefix=*)  prefix=$value;;
-        --bindir=*)  bindir=$value;;
-        --datadir=*) datadir=$value;;
-        --*) error "Unrecognized option $arg";;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+
+        -v|--version)
+            echo "Xjump version $version"
+            exit 0
+            ;;
+
+        --prefix=*)
+            prefix=$value
+            set_prefix=yes
+            ;;
+
+        --bindir=*)
+            bindir=$value
+            set_bindir=yes
+            ;;
+
+        --datadir=*)
+            datadir=$value
+            set_datadir=yes
+            ;;
+
+        -*)
+            echo >&2 "Unrecognized option $arg"
+            exit 1
+            ;;
+
         *=*)
             line="${key} = $(escape_make "$value")"
             variables="${variables}${nl}${line}"
@@ -118,12 +142,10 @@ fi
 # information will be included in the config.h, we have to figure out the
 # absolute paths to them right now. We don't want to give the impression that
 # the user can override the prefix later with `make prefix=blah`.
-[ -n "$prefix"  ] || prefix="/usr/local"
-[ -n "$bindir"  ] || bindir="$prefix/bin"
-[ -n "$datadir" ] || datadir="$prefix/datadir"
+[ "$set_prefix" = "no" ]  && prefix="/usr/local"
+[ "$set_bindir" = "no" ]  && bindir="$prefix/bin"
+[ "$set_datadir" = "no" ] && datadir="$prefix/share"
 
-# TODO this appears to be  misbehaving if the intermediate
-# directory does not exist.
 prefix=$(absolute "$prefix")   || canonicalization_error --prefix
 bindir=$(absolute "$bindir")   || canonicalization_error --bindir
 datadir=$(absolute "$datadir") || canonicalization_error --datadir
