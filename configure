@@ -46,6 +46,22 @@ Compilation variables:
 EOF
 }
 
+absolute() {
+    # Convert an installation directory to an absolute path.
+    # Since some distros don't have realpath, only try calling if if we actually need to.
+    # Note: the installation directory might not exist, so we cannot use `readlink -f`
+    case "$1" in
+        /*) printf "%s" "$1";;
+        *) realpath -m "$1";;
+    esac
+}
+
+canonicalization_error() {
+    echo >&2 "Please specify an absolute path for $1."
+    echo >&2 "We tried using realpath to get an absolute path but that did not work."
+    exit 1
+}
+
 escape_c() {
     printf "%s" "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'
 }
@@ -108,9 +124,9 @@ fi
 
 # TODO this appears to be  misbehaving if the intermediate
 # directory does not exist.
-prefix=$(readlink -f "$prefix")
-bindir=$(readlink -f "$bindir")
-datadir=$(readlink -f "$datadir")
+prefix=$(absolute "$prefix")   || canonicalization_error --prefix
+bindir=$(absolute "$bindir")   || canonicalization_error --bindir
+datadir=$(absolute "$datadir") || canonicalization_error --datadir
 
 # Finally, store the information where the makefile can see it and tell the
 # user where things are going to be installed.
