@@ -308,6 +308,9 @@ static void input_keyup(const SDL_Keysym key)
 
 #define GAME_SPEED 25 /* Time per simulation frame, in milliseconds */
 
+static const int leftLimit = S;                  // x coordinate that collides with left
+static const int rightLimit = (FIELD_W-1)*S - R; // x coordinate that collides with right
+
 typedef enum {
     STATE_RUNNING,
     STATE_PAUSED,
@@ -420,20 +423,24 @@ static void scroll()
     G.y += S;
 }
 
-static bool isStanding()
+static bool isStanding(int hx, int hy)
 {
     if (G.vy < 0) {
         return false;
     }
 
-    int y = (G.y + R)/S;
+    int y = (hy + R)/S;
     if (y >= FIELD_H) {
         return false;
     }
 
     // We're standing as long as 8/32 pixels touch the ground.
     const Floor *fl = get_floor(G.scrollOffset - y);
-    return (fl->left*S - 24 <= G.x && G.x <= fl->right*S + 8);
+    return (fl->left*S - 24 <= hx && hx <= fl->right*S + 8);
+}
+
+static int collideWithFloor(int hy) {
+    return (hy / S) * S;
 }
 
 static void updateRunningGame()
@@ -471,21 +478,19 @@ static void updateRunningGame()
     // 1px bounce if we run straight into a wall (which can appear as a strange
     // flickering).
 
-    int leftLimit = S;
     if (G.x < leftLimit && G.vx <= 0) {
         G.x  = leftLimit + max(0, leftLimit - G.x - 2)/2;
         G.vx = -G.vx/2;
     }
 
-    int rightLimit = (FIELD_W-1)*S - R;
     if (G.x > rightLimit && G.vx >= 0) {
         G.x  = rightLimit - max(0, G.x - rightLimit - 2)/2;
         G.vx = -G.vx/2;
     }
 
-    G.isStanding = isStanding();
+    G.isStanding = isStanding(G.x, G.y);
     if (G.isStanding) {
-        G.y = (G.y/S) * S;
+        G.y = collideWithFloor(G.y);
         G.vy = 0;
 
         int n = (G.scrollOffset - (G.y + R)/S) / 5;
@@ -954,15 +959,21 @@ int main()
                     }
                 }
 
-                // Player
+                // Player sprite (interpolating the position)
+                int hx = G.x + (G.vx/2)*((int) frameBudget)/GAME_SPEED;
+                int hy = G.y + (G.vy)*((int) frameBudget)/GAME_SPEED;
+                if (hx < leftLimit) { hx = leftLimit; }
+                if (hx > rightLimit) { hx = rightLimit; }
+                if (isStanding(hx, hy)) { hy = collideWithFloor(hy); }
+
                 int isFlying  = !G.isStanding;
                 int isRight   = G.isFacingRight;
                 int isVariant = (G.isStanding? G.isIdleVariant : (G.vy > 0));
                 int sprite_index = (isFlying&1) << 2 | (isVariant&1) << 1 | (isRight&1) << 0;
-                const SDL_Rect heroDst = { gameX + G.x, gameY + G.y, R, R };
+                const SDL_Rect heroDst = { gameX + hx, gameY + hy, R, R };
                 SDL_RenderCopy(renderer, sprites, &heroSprite[sprite_index], &heroDst);
-                // TODO: interpolate the hero position
 
+                // Text box
                 if (G.state == STATE_GAMEOVER) {
                     draw_text_box(renderer, &gameOverDst);
                     draw_text(renderer, font, gameOverMsg, textColor, &gameOverDst);
