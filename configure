@@ -9,15 +9,15 @@ version='3.0'
 usage() {
     cat <<EOF
 Usage: $0 [OPTION]... [VAR=VALUE]...
-
 Configure the installation location and compilation options for Xjump.
+
 By default, \`make install' will install all the files under /usr/local.
-Use the \`--prefix' flag to choose a different location. Defaults for the
+You can use the --prefix flag to choose a different location. Defaults for the
 options are specified in brackets.
 
-To set compilation variables (e.g. CC, CFLAGS...), specify them as VAR=VALUE.
-See below for descriptions of some of the relevant variables. We use pkg-config
-to determine the default value for these variables.
+To set compilation variables (e.g. CC, CFLAGS), specify them as VAR=VALUE.
+Most of the time it's fine to leave these in the default setting. We use
+pkg-config to figure out the appropriate compilation flags for SDL.
 
 General:
     -h, --help         display this help and exit
@@ -25,9 +25,8 @@ General:
 
 Instalation directories:
     --prefix=PREFIX    root installation directory [/usr/local]
-
-    --bindir=DIR       where to install the game executable [PREFIX/bin]
-    --datadir=DIR      where to install the game sprites [PREFIX/share]
+    --bindir=DIR       where to install executables [PREFIX/bin]
+    --datadir=DIR      where to install data files [PREFIX/share]
 
 Compilation variables:
     CC                 C compiler command
