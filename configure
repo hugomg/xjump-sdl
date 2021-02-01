@@ -98,7 +98,7 @@ EOF
     fi
 fi
 
-# Now we compute the final values of the instalation directories. Since this
+# Now we compute the final values of the installation directories. Since this
 # information will be included in the config.h, we have to figure out the
 # absolute paths to them right now. We don't want to give the impression that
 # the user can override the prefix later with `make prefix=blah`.
