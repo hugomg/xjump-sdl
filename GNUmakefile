@@ -19,6 +19,7 @@ include config.mk
 
 # Standard targets
 # ----------------
+# TODO: install a desktop file + icon
 
 all: xjump
 

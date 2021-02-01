@@ -416,6 +416,7 @@ static void init_game()
     }
 }
 
+// TODO: try implementing smooth scroll
 static void scroll()
 {
     generate_floor();
@@ -749,6 +750,9 @@ int main()
 
     // Load SDL resources
 
+    // TODO: make the theme customizable
+    // TODO: make the classig theme the default
+    // TODO: redraw the jumpnbump theme with better images
     SDL_Surface *spritesSurface = SDL_LoadBMP(XJUMP_DATADIR "/xjump/theme-jumpnbump.bmp");
     if (!spritesSurface) panic("Could not sprite file ", SDL_GetError());
 
@@ -940,7 +944,6 @@ int main()
                 draw_text(renderer, font, line, textColor, &dst);
 
             } else {
-
                 SDL_RenderSetClipRect(renderer, &gameDst);
 
                 const SDL_Rect backgroundSrc = { 0, 0, gameW, gameH };
