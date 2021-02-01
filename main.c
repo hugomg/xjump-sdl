@@ -783,7 +783,7 @@ int main()
 
     SDL_Texture *gameBackground = SDL_CreateTexture(
             renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
-            gameW, gameH);
+            gameW, gameH + S);
     if (!gameBackground) panic("Could not create game background texture", SDL_GetError());
 
     {
@@ -810,6 +810,11 @@ int main()
                 const SDL_Rect dst = { x*S, y*S, S, S };
                 SDL_RenderCopy(renderer, sprites, src, &dst);
             }
+        }
+
+        for (int x = 0; x < FIELD_W; x++) {
+            const SDL_Rect dst = { x*S, gameH, S, S };
+            SDL_RenderCopy(renderer, sprites, &floorSprite, &dst);
         }
 
         SDL_RenderPresent(renderer);
@@ -930,15 +935,22 @@ int main()
                 draw_text(renderer, font, line, textColor, &dst);
 
             } else {
-                SDL_RenderCopy(renderer, gameBackground, NULL, &gameDst);
+
                 SDL_RenderSetClipRect(renderer, &gameDst);
+
+                const SDL_Rect backgroundSrc = { 0, 0, gameW, gameH };
+                SDL_RenderCopy(renderer, gameBackground, &backgroundSrc, &gameDst);
 
                 // Floors
                 for (int y = 0; y < 24; y++) {
-                    const Floor *fl = &G.floors[mod(G.scrollOffset - y, FIELD_H)];
-                    for (int x = fl->left; x <= fl->right; x++) {
-                        const SDL_Rect spriteDst = { gameX + x*S, gameY + y*S, S, S };
-                        SDL_RenderCopy(renderer, sprites, &floorSprite, &spriteDst);
+                    const Floor *floor = &G.floors[mod(G.scrollOffset - y, FIELD_H)];
+                    int xl = floor->left;
+                    int xr = floor->right;
+                    if (xl <= xr) {
+                        int w = xr - xl + 1;
+                        const SDL_Rect src = { 0, gameH, w*S, S };
+                        const SDL_Rect dst = { gameX + xl*S, gameY + y*S, w*S, S };
+                        SDL_RenderCopy(renderer, gameBackground, &src, &dst);
                     }
                 }
 
@@ -947,11 +959,9 @@ int main()
                 int isRight   = G.isFacingRight;
                 int isVariant = (G.isStanding? G.isIdleVariant : (G.vy > 0));
                 int sprite_index = (isFlying&1) << 2 | (isVariant&1) << 1 | (isRight&1) << 0;
-
                 const SDL_Rect heroDst = { gameX + G.x, gameY + G.y, R, R };
                 SDL_RenderCopy(renderer, sprites, &heroSprite[sprite_index], &heroDst);
-
-                SDL_RenderSetClipRect(renderer, NULL);
+                // TODO: interpolate the hero position
 
                 if (G.state == STATE_GAMEOVER) {
                     draw_text_box(renderer, &gameOverDst);
@@ -961,6 +971,8 @@ int main()
                     draw_text_box(renderer, &pauseDst);
                     draw_text(renderer, font, pauseMsg, textColor, &pauseDst);
                 }
+
+                SDL_RenderSetClipRect(renderer, NULL);
             }
 
             SDL_RenderPresent(renderer);
@@ -974,11 +986,6 @@ int main()
             // using 100% of the CPU.
             SDL_Delay(GAME_SPEED);
         }
-
-        //
-        // Wait
-        //
-
     }
 
 quit:
