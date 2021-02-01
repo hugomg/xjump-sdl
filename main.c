@@ -227,10 +227,10 @@ static struct {
     bool isPressing[INPUT_OTHER+1];
 } K;
 
-static Input translateHotkey(SDL_Keysym k)
+static Input translateHotkey(SDL_Keysym key)
 {
     // TODO should we use scan codes?
-    switch (k.sym) {
+    switch (key.sym) {
         case SDLK_UP:
         case SDLK_DOWN:
         case SDLK_w:
@@ -261,9 +261,9 @@ static void init_input()
     }
 }
 
-static void input_keydown(const SDL_Keysym sym)
+static void input_keydown(const SDL_Keysym key)
 {
-    Input input = translateHotkey(sym);
+    Input input = translateHotkey(key);
     K.isPressing[input] = true;
     switch (input) {
         case INPUT_LEFT:
@@ -279,9 +279,9 @@ static void input_keydown(const SDL_Keysym sym)
     }
 }
 
-static void input_keyup(const SDL_Keysym sym)
+static void input_keyup(const SDL_Keysym key)
 {
-    Input input = translateHotkey(sym);
+    Input input = translateHotkey(key);
     K.isPressing[input] = false;
     switch (input) {
         case INPUT_LEFT:
@@ -324,7 +324,7 @@ static struct {
 
     // Gameover / Pause / Highscores
     GameState state;
-    int needsRepaint;  // CPU optimization: don't redraw static screens.
+    GameState lastDrawn; // CPU optimization: don't redraw static screens.
     int gameOverCount; // How many frames since we hit gameover
 
     // Physics
@@ -385,7 +385,7 @@ static void init_game()
     G.score = 0;
 
     G.state = STATE_RUNNING;
-    G.needsRepaint  = 0;
+    G.lastDrawn = STATE_RUNNING; // (a white lie, but works)
     G.gameOverCount = 0;
 
     G.x    = (FIELD_W/2)*S - R/2;
@@ -434,28 +434,8 @@ static bool isStanding()
     return (fl->left*S - 24 <= G.x && G.x <= fl->right*S + 8);
 }
 
-static void update_game()
+static void updateRunningGame()
 {
-    if (G.state == STATE_GAMEOVER) {
-        if (++G.gameOverCount >= 80) {
-            G.state = STATE_HIGHSCORES;
-        }
-        return;
-    }
-
-    if (G.state == STATE_PAUSED) {
-        return;
-    }
-
-    if (G.state == STATE_HIGHSCORES) {
-        return;
-    }
-
-    // else
-    assert(G.state == STATE_RUNNING);
-
-    G.needsRepaint = true;
-
     if (G.hasStarted) {
         if (G.scrollSpeed < 5000) {
             G.scrollSpeed++;
@@ -551,6 +531,26 @@ static void update_game()
             G.vy = min(G.vy + 2, 16);
             G.jump = 0;
         }
+    }
+}
+
+static void updateGame()
+{
+    switch (G.state) {
+        case STATE_GAMEOVER:
+            if (++G.gameOverCount >= 80) {
+                G.state = STATE_HIGHSCORES;
+            }
+            break;
+
+        case STATE_PAUSED:
+        case STATE_HIGHSCORES:
+            // Do nothing
+            break;
+
+        case STATE_RUNNING:
+            updateRunningGame();
+            break;
     }
 }
 
@@ -831,19 +831,22 @@ int main()
                 case SDL_QUIT:
                     goto quit;
 
-                case SDL_KEYUP:
-                    input_keyup(e.key.keysym);
+                case SDL_KEYUP: {
+                    SDL_Keysym key = e.key.keysym;
+                    input_keyup(key);
                     break;
+                }
 
-                case SDL_KEYDOWN:
-                    input_keydown(e.key.keysym);
-                    if (e.key.keysym.sym == SDLK_q && (e.key.keysym.mod & KMOD_SHIFT)) {
+                case SDL_KEYDOWN: {
+                    SDL_Keysym key = e.key.keysym;
+                    input_keydown(key);
+                    if (key.sym == SDLK_q && (key.mod & KMOD_SHIFT)) {
                         goto quit;
                     }
                     switch (G.state) {
                         case STATE_RUNNING:
-                            if (e.key.keysym.sym == SDLK_p
-                             || e.key.keysym.sym == SDLK_PAUSE) {
+                            if (key.sym == SDLK_p
+                             || key.sym == SDLK_PAUSE) {
                                 G.state = STATE_PAUSED;
                             }
                             break;
@@ -857,17 +860,21 @@ int main()
                             break;
 
                         case STATE_HIGHSCORES:
-                            init_game();
                             init_input();
+                            init_game(); // G.state = STATE_RUNNING;
                             break;
                     }
                     break;
+                }
 
                 case SDL_WINDOWEVENT:
-                    if (e.window.event == SDL_WINDOWEVENT_FOCUS_LOST && G.state == STATE_RUNNING) {
-                        G.state = STATE_PAUSED;
+                    switch (e.window.event) {
+                        case SDL_WINDOWEVENT_FOCUS_LOST:
+                            if (G.state == STATE_RUNNING) {
+                                G.state = STATE_PAUSED;
+                            }
+                            break;
                     }
-                    break;
 
                 default:
                     break;
@@ -878,13 +885,15 @@ int main()
         // Update Game State
         //
 
-        update_game();
+        updateGame();
 
         //
         // Draw
         //
 
-        if (G.needsRepaint) {
+        bool needsRepaint = (G.state == STATE_RUNNING || G.lastDrawn != G.state);
+        if (needsRepaint) {
+
             SDL_RenderCopy(renderer, windowBackground, NULL, NULL);
 
             char scoreDigits[32];
@@ -933,30 +942,20 @@ int main()
                 SDL_RenderCopy(renderer, sprites, &heroSprite[sprite_index], &heroDst);
 
                 SDL_RenderSetClipRect(renderer, NULL);
-            }
 
-            switch (G.state) {
-                case STATE_GAMEOVER:
+                if (G.state == STATE_GAMEOVER) {
                     draw_text_box(renderer, &gameOverDst);
                     draw_text(renderer, font, gameOverMsg, textColor, &gameOverDst);
-                    break;
-
-                case STATE_PAUSED:
+                }
+                if (G.state == STATE_PAUSED) {
                     draw_text_box(renderer, &pauseDst);
                     draw_text(renderer, font, pauseMsg, textColor, &pauseDst);
-                    G.needsRepaint = false;
-                    break;
-
-                case STATE_HIGHSCORES:
-                    G.needsRepaint = false;
-                    break;
-
-                default:
-                    break;
+                }
             }
 
             SDL_RenderPresent(renderer);
 
+            G.lastDrawn = G.state;
         }
 
         //
