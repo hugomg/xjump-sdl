@@ -106,6 +106,8 @@ fi
 [ -n "$bindir"  ] || bindir="$prefix/bin"
 [ -n "$datadir" ] || datadir="$prefix/datadir"
 
+# TODO this appears to be  misbehaving if the intermediate
+# directory does not exist.
 prefix=$(readlink -f "$prefix")
 bindir=$(readlink -f "$bindir")
 datadir=$(readlink -f "$datadir")

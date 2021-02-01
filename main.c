@@ -306,6 +306,8 @@ static void input_keyup(const SDL_Keysym key)
 #define FIELD_W 32 /* Width of playing field, in tiles */
 #define FIELD_H 24 /* Height of playing field, in tiles */
 
+#define GAME_SPEED 25 /* Time per simulation frame, in milliseconds */
+
 typedef enum {
     STATE_RUNNING,
     STATE_PAUSED,
@@ -817,9 +819,11 @@ int main()
     // Tell the renderer to stretch the drawing if the window is resized
     SDL_RenderSetLogicalSize(renderer, windowW, windowH);
 
-    while (1) {
+    // FPS management (all times in milliseconds)
+    uint32_t frameBudget = 0;           // Amount of time since the last simulation update
+    uint32_t lastTime = SDL_GetTicks(); // Last time that we checked the clock
 
-        uint32_t frame_start_time = SDL_GetTicks();
+    while (1) {
 
         //
         // Respond to events
@@ -850,7 +854,7 @@ int main()
                                 G.state = STATE_PAUSED;
                             }
                             break;
-                            
+
                         case STATE_PAUSED:
                             G.state = STATE_RUNNING;
                             break;
@@ -885,7 +889,13 @@ int main()
         // Update Game State
         //
 
-        updateGame();
+        uint32_t now = SDL_GetTicks();
+        frameBudget += now - lastTime;
+        lastTime = now;
+        while (frameBudget >= GAME_SPEED) {
+            frameBudget -= GAME_SPEED;
+            updateGame();
+        }
 
         //
         // Draw
@@ -954,21 +964,21 @@ int main()
             }
 
             SDL_RenderPresent(renderer);
-
             G.lastDrawn = G.state;
+
+        } else {
+
+            // Normally, the game yields the CPU when it calls RenderPresent, due to the
+            // PRESENTVSYNC setting. However, when we don't draw anything to the screen
+            // we have to put the program to sleep ourselves to prevent the game from
+            // using 100% of the CPU.
+            SDL_Delay(GAME_SPEED);
         }
 
         //
         // Wait
         //
 
-        // SDL_Delay isn't super accurate because it is at the mercy of the OS scheduler.
-        // Nevertheless, the game feels OK. TODO consider rendering at 60 FPS.
-        uint32_t time_spent = SDL_GetTicks() - frame_start_time;
-        uint32_t FRAME_DURATION = 25; // 40 FPS
-        if (time_spent < FRAME_DURATION) {
-            SDL_Delay(FRAME_DURATION - time_spent);
-        }
     }
 
 quit:
