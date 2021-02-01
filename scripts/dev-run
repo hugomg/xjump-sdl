@@ -1,0 +1,13 @@
+#!/bin/sh
+
+# Script for recompiling and running xjump in a single command.
+# Use only for development
+
+if ! grep 'prefix.*=.*build' config.mk > /dev/null 2> /dev/null; then
+    echo >&2 "Please run ./configure --prefix=build"
+    exit 1
+fi
+
+make || exit $?
+make install > /dev/null || exit $?
+./build/bin/xjump

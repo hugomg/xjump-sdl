@@ -1,3 +1,0 @@
-#!/bin/sh
-# //TODO ensure that we have --prefix=build
-make && make install && ./build/bin/xjump
