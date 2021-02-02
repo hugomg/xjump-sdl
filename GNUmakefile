@@ -32,6 +32,7 @@ distclean: clean
 install:
 	$(INSTALL_PROGRAM) -D xjump $(DESTDIR)$(bindir)/xjump
 	$(INSTALL_DATA) -D images/ui-font.bmp         $(DESTDIR)$(datadir)/xjump/ui-font.bmp
+	$(INSTALL_DATA) -D images/theme-classic.bmp   $(DESTDIR)$(datadir)/xjump/theme-classic.bmp
 	$(INSTALL_DATA) -D images/theme-jumpnbump.bmp $(DESTDIR)$(datadir)/xjump/theme-jumpnbump.bmp
 
 uninstall:

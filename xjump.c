@@ -772,7 +772,9 @@ int main()
     // TODO: make the classig theme the default
     // TODO: redraw the jumpnbump theme with better images
     SDL_Surface *spritesSurface = SDL_LoadBMP(XJUMP_DATADIR "/xjump/theme-jumpnbump.bmp");
-    if (!spritesSurface) panic("Could not sprite file ", SDL_GetError());
+    if (!spritesSurface) panic("Could not load sprite file ", SDL_GetError());
+    spritesSurface->format->Amask = 0xFF000000;
+    spritesSurface->format->Ashift = 24;
 
     SDL_Surface *fontSurface = SDL_LoadBMP(XJUMP_DATADIR "/xjump/ui-font.bmp");
     if (!fontSurface) panic("Could not load font file", SDL_GetError());
@@ -788,7 +790,8 @@ int main()
         /*flags*/ SDL_WINDOW_RESIZABLE);
     if (!window) panic("Could not create window", SDL_GetError());
 
-    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    SDL_RendererFlags renderFlags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC |SDL_RENDERER_TARGETTEXTURE;
+    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, renderFlags);
     if (!renderer) panic("Coult not create SDL renderer", SDL_GetError());
 
     SDL_Texture *sprites = SDL_CreateTextureFromSurface(renderer, spritesSurface);
@@ -830,6 +833,10 @@ int main()
 
     {
         SDL_SetRenderTarget(renderer, gameBackground);
+
+        SDL_SetTextureBlendMode(gameBackground, SDL_BLENDMODE_BLEND);
+        SDL_SetRenderDrawColor(renderer, 0,  0, 0, 0);
+        SDL_RenderClear(renderer);
 
         for (int y = 0; y < FIELD_H; y++) {
             for (int x = 0; x < FIELD_W; x++) {
