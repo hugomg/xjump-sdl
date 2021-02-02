@@ -73,6 +73,12 @@ static void panic(const char *what, const char *fullError)
 }
 
 //
+// Command-line arguments & config
+// -------------------------------
+
+int isSmoothScroll = 1;
+
+//
 // Random Number Generator
 // -----------------------
 //
@@ -546,10 +552,16 @@ static void updateRunningGame()
         scroll();
     }
 
-    if (G.y + G.forcedScroll < topLimit) {
-        G.forcedScroll = topLimit - G.y;
-        while (G.forcedScroll >= S) {
-            G.scrollCount = 0;
+    if (isSmoothScroll) {
+        if (G.y + G.forcedScroll < topLimit) {
+            G.forcedScroll = topLimit - G.y;
+            while (G.forcedScroll >= S) {
+                G.scrollCount = 0;
+                scroll();
+            }
+        }
+    } else {
+        while (G.y < topLimit) {
             scroll();
         }
     }
@@ -977,7 +989,9 @@ int main()
                 if (hx > rightLimit) { hx = rightLimit; }
                 if (isStanding(hx, hy)) { hy = collideWithFloor(hy); }
                 int sx = hx; // screen coordinates
-                int sy = hy + G.forcedScroll + S*G.scrollCount/SCROLL_THRESHOLD;
+                int sy = (isSmoothScroll
+                        ? hy + G.forcedScroll + S*G.scrollCount/SCROLL_THRESHOLD
+                        : hy);
                 if (sy < topLimit) { sy = topLimit; }
 
                 // Floors
