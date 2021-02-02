@@ -317,6 +317,7 @@ static void input_keyup(const SDL_Keysym key)
 
 #define FIELD_W 32 /* Width of playing field, in tiles */
 #define FIELD_H 24 /* Height of playing field, in tiles */
+#define FIELD_EXTRA 3 /* Number of extra rows that we have to draw, to support scrolling */
 
 #define NFLOORS 64    /* Number of floors held in memory */
 
@@ -743,6 +744,9 @@ int main()
     const int gameW = S * FIELD_W;
     const int gameH = S * FIELD_H;
 
+    const int backgroundW = S * FIELD_W;
+    const int backgroundH = S * (FIELD_H + FIELD_EXTRA);
+
     const int scoreDigitsW = NscoreDigits * FW;
     const int scoreW = scoreLabelW + FW + scoreDigitsW;
 
@@ -821,7 +825,7 @@ int main()
 
     SDL_Texture *gameBackground = SDL_CreateTexture(
             renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
-            gameW, gameH + S);
+            backgroundW, backgroundH + S);
     if (!gameBackground) panic("Could not create game background texture", SDL_GetError());
 
     {
@@ -846,7 +850,8 @@ int main()
         SDL_SetRenderDrawColor(renderer, 0,  0, 0, 0);
         SDL_RenderClear(renderer);
 
-        for (int y = 0; y < FIELD_H; y++) {
+        // Background
+        for (int y = 0; y < FIELD_H + FIELD_EXTRA; y++) {
             for (int x = 0; x < FIELD_W; x++) {
                 const SDL_Rect *src = ((x == 0) ? &LWallSprite : (x == FIELD_W-1) ? &RWallSprite : &skySprite);
                 const SDL_Rect dst = { x*S, y*S, S, S };
@@ -854,8 +859,9 @@ int main()
             }
         }
 
+        // Wide floor
         for (int x = 0; x < FIELD_W; x++) {
-            const SDL_Rect dst = { x*S, gameH, S, S };
+            const SDL_Rect dst = { x*S, backgroundH, S, S };
             SDL_RenderCopy(renderer, sprites, &floorSprite, &dst);
         }
 
@@ -979,9 +985,6 @@ int main()
             } else {
                 SDL_RenderSetClipRect(renderer, &gameDst);
 
-                const SDL_Rect backgroundSrc = { 0, 0, gameW, gameH };
-                SDL_RenderCopy(renderer, gameBackground, &backgroundSrc, &gameDst);
-
                 // Predict current hero position
                 int hx = G.x + (G.vx/2)*((int) frameBudget)/GAME_SPEED; // logical coordinates
                 int hy = G.y + (G.vy)*((int) frameBudget)/GAME_SPEED;
@@ -989,19 +992,22 @@ int main()
                 if (hx > rightLimit) { hx = rightLimit; }
                 if (isStanding(hx, hy)) { hy = collideWithFloor(hy); }
                 int sx = hx; // screen coordinates
-                int sy = (isSmoothScroll
-                        ? hy + G.forcedScroll + S*G.scrollCount/SCROLL_THRESHOLD
-                        : hy);
+                int sy = hy + (isSmoothScroll ? G.forcedScroll + S*G.scrollCount/SCROLL_THRESHOLD : 0);
                 if (sy < topLimit) { sy = topLimit; }
 
+                // Background
+                const SDL_Rect backgroundSrc = { 0, 0, backgroundW, backgroundH };
+                const SDL_Rect backgroundDst = { gameX, gameY - S*FIELD_EXTRA + (sy-hy), backgroundW, backgroundH };
+                SDL_RenderCopy(renderer, gameBackground, &backgroundSrc, &backgroundDst);
+
                 // Floors
-                for (int y = -1; y < 24; y++) {
+                for (int y = -FIELD_EXTRA; y < FIELD_H; y++) {
                     const Floor *floor = get_floor(G.floorOffset - y);
                     int xl = floor->left;
                     int xr = floor->right;
                     if (xl <= xr) {
                         int w = xr - xl + 1;
-                        const SDL_Rect src = { 0, gameH, w*S, S };
+                        const SDL_Rect src = { 0, backgroundH, w*S, S };
                         const SDL_Rect dst = { gameX + xl*S, gameY + y*S + (sy-hy), w*S, S };
                         SDL_RenderCopy(renderer, gameBackground, &src, &dst);
                     }
