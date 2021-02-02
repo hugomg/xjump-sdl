@@ -314,10 +314,15 @@ static void input_keyup(const SDL_Keysym key)
 #define FIELD_H 24 /* Height of playing field, in tiles */
 
 #define NFLOORS 64    /* Number of floors held in memory */
-#define GAME_SPEED 25 /* Time per simulation frame, in milliseconds */
+
+#define GAME_SPEED 25 /* (40 FPS) Time per simulation frame, in milliseconds */
+#define MAX_SCROLL_SPEED 5000  /* scrollCount increment per frame, at max speed */
+#define SCROLL_THRESHOLD 20000 /* scrollCount that triggers a frame change */
 
 static const int leftLimit = S;                  // x coordinate that collides with left
 static const int rightLimit = (FIELD_W-1)*S - R; // x coordinate that collides with right
+static const int topLimit = 5*S;        // y coordinate that triggers a forced scroll
+static const int botLimit = FIELD_H*S;  // y coordinate that triggers a game over
 
 typedef enum {
     STATE_RUNNING,
@@ -352,8 +357,9 @@ static struct {
     int idleCount;
 
     // Scrolling
-    int hasStarted;    // Don't start scrolling until we jump for the first time
-    int scrollOffset;  // Tile height of the row at the top of the screen
+    int hasStarted;   // Don't start scrolling until we jump for the first time
+    int floorOffset;  // Tile height of the row at the top of the screen
+    int forcedScroll; // Additional scroll distance in pixels. Happens when you get close to the top.
     int scrollCount;
     int scrollSpeed;
 
@@ -413,7 +419,8 @@ static void init_game()
     G.idleCount     = 0;
 
     G.hasStarted   = false;
-    G.scrollOffset = 20;
+    G.floorOffset  = 20;
+    G.forcedScroll = 0;
     G.scrollCount  = 0;
     G.scrollSpeed  = 200;
 
@@ -428,8 +435,11 @@ static void init_game()
 static void scroll()
 {
     generate_floor();
-    G.scrollOffset += 1;
+    G.floorOffset += 1;
     G.y += S;
+    if (G.forcedScroll >= S) {
+        G.forcedScroll -= S;
+    }
 }
 
 static bool isStanding(int hx, int hy)
@@ -444,7 +454,7 @@ static bool isStanding(int hx, int hy)
     }
 
     // We're standing as long as 8/32 pixels touch the ground.
-    const Floor *fl = get_floor(G.scrollOffset - y);
+    const Floor *fl = get_floor(G.floorOffset - y);
     return (fl->left*S - 24 <= hx && hx <= fl->right*S + 8);
 }
 
@@ -454,39 +464,14 @@ static int collideWithFloor(int hy) {
 
 static void updateRunningGame()
 {
-    if (G.hasStarted) {
-        if (G.scrollSpeed < 5000) {
-            G.scrollSpeed++;
-        }
-
-        G.scrollCount += G.scrollSpeed;
-        if (G.scrollCount > 20000) {
-            G.scrollCount -= 20000;
-            scroll();
-        }
-    }
-
     G.x += G.vx / 2;
     G.y += G.vy;
 
-    if (G.y >= S*FIELD_H) {
-        G.state = STATE_GAMEOVER;
-        highscore_update(G.score);
-        return;
-    }
-
-    if (G.y < 5*S) {
-        G.scrollCount = 0;
-        scroll();
-    }
-
-    // When we bounce off the walls the new X coordinate is calculated
-    // assuming that we bounce back at 1/2 the speed. This is subtle but
-    // makes the result of bouncing off the walls slightly more predictable.
-    // The "-2" in the formula is a dampening factor that avoids a perpetual
-    // 1px bounce if we run straight into a wall (which can appear as a strange
-    // flickering).
-
+    // First we collide with the walls, setting the x coordinate.
+    // The original version of xjump just set the x coordinate glued to the wall. This version makes
+    // the walls subtly bouncier by taking into account the X velocity after the bounce. It's subtle
+    // but feels better, IMO, specially if you are just bouncing off the walls before the game
+    // starts. The "-2" in the formula is a dampening factor to avoid "flickering" 1px bounces.
     if (G.x < leftLimit && G.vx <= 0) {
         G.x  = leftLimit + max(0, leftLimit - G.x - 2)/2;
         G.vx = -G.vx/2;
@@ -497,12 +482,14 @@ static void updateRunningGame()
         G.vx = -G.vx/2;
     }
 
+    // Next we collide with the floors, setting the y coordinate.
+    // This must be after the wall collisions because it depends on the x.
     G.isStanding = isStanding(G.x, G.y);
     if (G.isStanding) {
         G.y = collideWithFloor(G.y);
         G.vy = 0;
 
-        int n = (G.scrollOffset - (G.y + R)/S) / 5;
+        int n = (G.floorOffset - (G.y + R)/S) / 5;
         if (n > G.score) {
             G.score = n;
         }
@@ -547,6 +534,31 @@ static void updateRunningGame()
             G.vy = min(G.vy + 2, 16);
             G.jump = 0;
         }
+    }
+
+    // Now we scroll the screen.
+    // This must be after we know the x and y.
+    if (G.hasStarted) {
+        G.scrollSpeed = min(MAX_SCROLL_SPEED, G.scrollSpeed + 1);
+        G.scrollCount += G.scrollSpeed;
+    }
+
+    while (G.scrollCount > SCROLL_THRESHOLD) {
+        G.scrollCount -= SCROLL_THRESHOLD;
+        scroll();
+    }
+
+    if (G.y + G.forcedScroll < topLimit) {
+        G.forcedScroll = topLimit - G.y;
+        while (G.forcedScroll >= S) {
+            G.scrollCount = 0;
+            scroll();
+        }
+    }
+
+    if (G.y + G.forcedScroll >= botLimit) {
+        G.state = STATE_GAMEOVER;
+        highscore_update(G.score);
     }
 }
 
@@ -957,31 +969,35 @@ int main()
                 const SDL_Rect backgroundSrc = { 0, 0, gameW, gameH };
                 SDL_RenderCopy(renderer, gameBackground, &backgroundSrc, &gameDst);
 
+                // Predict current hero position
+                int hx = G.x + (G.vx/2)*((int) frameBudget)/GAME_SPEED; // logical coordinates
+                int hy = G.y + (G.vy)*((int) frameBudget)/GAME_SPEED;
+                if (hx < leftLimit) { hx = leftLimit; }
+                if (hx > rightLimit) { hx = rightLimit; }
+                if (isStanding(hx, hy)) { hy = collideWithFloor(hy); }
+                int sx = hx; // screen coordinates
+                int sy = hy + G.forcedScroll + S*G.scrollCount/SCROLL_THRESHOLD;
+                if (sy < topLimit) { sy = topLimit; }
+
                 // Floors
-                for (int y = 0; y < 24; y++) {
-                    const Floor *floor = get_floor(G.scrollOffset - y);
+                for (int y = -1; y < 24; y++) {
+                    const Floor *floor = get_floor(G.floorOffset - y);
                     int xl = floor->left;
                     int xr = floor->right;
                     if (xl <= xr) {
                         int w = xr - xl + 1;
                         const SDL_Rect src = { 0, gameH, w*S, S };
-                        const SDL_Rect dst = { gameX + xl*S, gameY + y*S, w*S, S };
+                        const SDL_Rect dst = { gameX + xl*S, gameY + y*S + (sy-hy), w*S, S };
                         SDL_RenderCopy(renderer, gameBackground, &src, &dst);
                     }
                 }
 
-                // Player sprite (interpolating the position)
-                int hx = G.x + (G.vx/2)*((int) frameBudget)/GAME_SPEED;
-                int hy = G.y + (G.vy)*((int) frameBudget)/GAME_SPEED;
-                if (hx < leftLimit) { hx = leftLimit; }
-                if (hx > rightLimit) { hx = rightLimit; }
-                if (isStanding(hx, hy)) { hy = collideWithFloor(hy); }
-
+                // Hero sprite
                 int isFlying  = !G.isStanding;
                 int isRight   = G.isFacingRight;
                 int isVariant = (G.isStanding? G.isIdleVariant : (G.vy > 0));
                 int sprite_index = (isFlying&1) << 2 | (isVariant&1) << 1 | (isRight&1) << 0;
-                const SDL_Rect heroDst = { gameX + hx, gameY + hy, R, R };
+                const SDL_Rect heroDst = { gameX + sx, gameY + sy, R, R };
                 SDL_RenderCopy(renderer, sprites, &heroSprite[sprite_index], &heroDst);
 
                 // Text box

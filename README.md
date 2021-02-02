@@ -7,6 +7,7 @@ obsolete and harder to compile on modern systems.
 ## New features and improvements
 
 - Increased the FPS from 40 to 60
+- Smooth scrolling animations
 - Game window is now resizable
 - More responsive controls when left and right keys are pressed at the same time
 
@@ -38,3 +39,4 @@ and for where to store the highscore files.
 
 This version of xjump tries to keep the interface closer to the original xjump.
 For example, it launches straight into the game instead of into a menu.
+The smooth scrolling feature is inspired by GNUJump though :)
