@@ -121,6 +121,9 @@ static uint32_t rnd(uint32_t a, uint32_t b)
 // ----------
 //
 
+// TODO: global highscores
+// https://fedoraproject.org/wiki/SIGs/Games/Packaging
+
 typedef struct {
     int64_t score;
     uid_t   player;
