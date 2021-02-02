@@ -313,6 +313,7 @@ static void input_keyup(const SDL_Keysym key)
 #define FIELD_W 32 /* Width of playing field, in tiles */
 #define FIELD_H 24 /* Height of playing field, in tiles */
 
+#define NFLOORS 64    /* Number of floors held in memory */
 #define GAME_SPEED 25 /* Time per simulation frame, in milliseconds */
 
 static const int leftLimit = S;                  // x coordinate that collides with left
@@ -359,12 +360,12 @@ static struct {
     // Floors
     int fpos;
     int next_floor;
-    Floor floors[FIELD_H];
+    Floor floors[NFLOORS];
 } G;
 
 static Floor *get_floor(int n)
 {
-    return &G.floors[mod(n, FIELD_H)];
+    return &G.floors[mod(n, NFLOORS)];
 }
 
 static void generate_floor()
@@ -418,7 +419,7 @@ static void init_game()
 
     G.fpos = rnd(0,21);
     G.next_floor = -3;
-    for (int i=0; i < FIELD_H; i++) {
+    for (int i=0; i < NFLOORS; i++) {
         generate_floor();
     }
 }
@@ -958,7 +959,7 @@ int main()
 
                 // Floors
                 for (int y = 0; y < 24; y++) {
-                    const Floor *floor = &G.floors[mod(G.scrollOffset - y, FIELD_H)];
+                    const Floor *floor = get_floor(G.scrollOffset - y);
                     int xl = floor->left;
                     int xr = floor->right;
                     if (xl <= xr) {
