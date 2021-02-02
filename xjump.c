@@ -957,6 +957,8 @@ int main()
         bool needsRepaint = (G.state == STATE_RUNNING || G.lastDrawn != G.state);
         if (needsRepaint) {
 
+            SDL_SetRenderDrawColor(renderer, backgroundColor.r,  backgroundColor.g, backgroundColor.b, backgroundColor.a);
+            SDL_RenderClear(renderer);
             SDL_RenderCopy(renderer, windowBackground, NULL, NULL);
 
             char scoreDigits[32];
