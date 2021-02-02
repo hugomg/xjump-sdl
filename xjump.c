@@ -769,17 +769,13 @@ int main()
     // Load SDL resources
 
     // TODO: make the theme customizable
-    // TODO: make the classig theme the default
+    // TODO: make the classic theme the default
     // TODO: redraw the jumpnbump theme with better images
     SDL_Surface *spritesSurface = SDL_LoadBMP(XJUMP_DATADIR "/xjump/theme-jumpnbump.bmp");
     if (!spritesSurface) panic("Could not load sprite file ", SDL_GetError());
-    spritesSurface->format->Amask = 0xFF000000;
-    spritesSurface->format->Ashift = 24;
 
     SDL_Surface *fontSurface = SDL_LoadBMP(XJUMP_DATADIR "/xjump/ui-font.bmp");
     if (!fontSurface) panic("Could not load font file", SDL_GetError());
-    // Make background transparent
-    SDL_SetColorKey(fontSurface, SDL_TRUE, SDL_MapRGB(fontSurface->format, 0, 0, 0));
 
     SDL_Window *window = SDL_CreateWindow(
         /*title*/ "xjump",
