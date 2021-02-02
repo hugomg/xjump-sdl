@@ -19,6 +19,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <inttypes.h>
 #include <limits.h>
 #include <stdbool.h>
@@ -30,6 +31,7 @@
 #include <sys/random.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 
 #include "config.h"
 
@@ -119,89 +121,91 @@ static uint32_t rnd(uint32_t a, uint32_t b)
 //
 // Highscores
 // ----------
-//
 
 // TODO: global highscores
 // https://fedoraproject.org/wiki/SIGs/Games/Packaging
+//
+// TODO: use flock
+// (See the original xjump code)
 
-typedef struct {
-    int64_t score;
-    uid_t   player;
-    time_t  time;
-} Highscore;
+static uid_t myUid;
+FILE *localHighscores;
+int64_t best_score;
 
-static uid_t   myUid;
-static char highscorePath[PATH_MAX];
-Highscore highscore;
+static FILE *open_local_highscores()
+{
+    const char *dirName  = "xjump";
+    const char *fileName = "highscores";
+
+    // Locate the local highscore file, following the XDG spec
+    // https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
+    char localDir[PATH_MAX];
+    const char *HOME          = getenv("HOME");
+    const char *XDG_DATA_HOME = getenv("XDG_DATA_HOME");
+    if (!isNullOrEmpty(XDG_DATA_HOME)) {
+        snprintf(localDir, sizeof(localDir), "%s/%s", XDG_DATA_HOME, dirName);
+    } else if (!isNullOrEmpty(HOME)) {
+        snprintf(localDir, sizeof(localDir), "%s/.local/share/%s", HOME, dirName);
+    } else {
+        return NULL;
+    }
+
+    char localFilename[PATH_MAX];
+    int size = snprintf(localFilename, sizeof(localFilename), "%s/%s", localDir, fileName);
+    if (size < 0 || size >= (int)sizeof(localFilename)) {  return NULL; }
+
+    // Create the containing directories
+    pid_t pid = fork();
+    if (pid == -1) panic("Could not fork", strerror(errno));
+    if (pid == 0) {
+        // Child
+        char *argv[] = { "mkdir", "-p", localDir, NULL };
+        execvp("mkdir", argv); // This call normally does not return
+        exit(1);
+    } else {
+        //Parent
+        int status;
+        waitpid(pid, &status, 0);
+        if (status != 0) return NULL;
+    }
+
+    // Open the local highscore file or create it if it does not already exist.
+    // We need to use low level open() to this precise combination of RW plus
+    // file creation. If we get an error, it's better to get it now than after
+    // a long game.
+    int flags = O_RDWR | O_CREAT;
+    int fd = open(localFilename, flags, 0666);
+    if (fd < 0) { return NULL; }
+    return fdopen(fd, "r+");
+}
 
 static void highscore_init()
 {
     myUid = getuid();
-    highscore.score  = -1;
-    highscore.player = myUid;
-    highscore.time   = 0;
-
-    // Locate the local highscore file, following the XDG spec
-    // https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
-    char dirPath[PATH_MAX];
-    const char *dirName = "xjump";
-    const char *HOME          = getenv("HOME");
-    const char *XDG_DATA_HOME = getenv("XDG_DATA_HOME");
-    if (!isNullOrEmpty(XDG_DATA_HOME)) {
-        snprintf(dirPath, sizeof(dirPath), "%s/%s", XDG_DATA_HOME, dirName);
-    } else if (!isNullOrEmpty(HOME)) {
-        snprintf(dirPath, sizeof(dirPath), "%s/.local/share/%s", HOME, dirName);
-    } else {
-        panic("Cannot locate local xjump directory", "$HOME environment variable is not set.");
+    localHighscores = open_local_highscores();
+    if (!localHighscores) {
+        fprintf(stderr, "Could not open local highscore file. Highcores will not be recorded\n");
     }
-
-    // Ensure that the containing dir exists...
-    if (0 != mkdir(dirPath, 0755) && errno != EEXIST) {
-        panic("Cannot create local xjump directory", strerror(errno));
-    }
-
-    const char *fileName = "highscores";
-    int size = snprintf(highscorePath, sizeof(highscorePath), "%s/%s", dirPath, fileName);
-    if (size < 0 || size >= (int)sizeof(highscorePath)) {
-        panic("Highscore file name is too long", NULL);
-    }
-
-    // Check if the highscore file is writable. If there is a problem it is
-    // better to warn the user now than after a long play session.
-    FILE *file = fopen(highscorePath, "a+");
-    if (!file) panic("Cannot write to highscore file", strerror(errno));
-    fclose(file);
 }
 
-static void highscore_read()
+static void highscore_update(int64_t new_score)
 {
-    FILE *file = fopen(highscorePath, "r");
-    if (!file) panic("Cannot open highscore file", strerror(errno));
+    if (localHighscores){
+        FILE *f = localHighscores;
 
-    Highscore h;
-    int nr = fscanf(file, "%ld %u %ld", &h.score, &h.player, &h.time);
-    if (nr == 3) {
-        highscore = h;
-    }
+        // Read current high score
+        rewind(f);
+        bool has_score = (1 == fscanf(f, "%ld", &best_score));
 
-    fclose(file);
-}
+        // Update the new high score
+        if (!has_score || new_score > best_score) {
+            best_score = new_score;
 
-static void highscore_update(int64_t newscore)
-{
-    highscore_read();
-    if (newscore > highscore.score) {
-        highscore.score  = newscore;
-        highscore.player = myUid;
-        highscore.time   = time(NULL);
-
-        FILE *file = fopen(highscorePath, "w");
-        if (!file) panic("Cannot open highscore file", strerror(errno));
-
-        Highscore h = highscore;
-        fprintf(file, "%ld %u %ld", h.score, h.player, h.time);
-
-        fclose(file);
+            rewind(f);
+            ftruncate(fileno(f), 0);
+            fprintf(f, "%ld\n", new_score);
+            fflush(f);
+        }
     }
 }
 
@@ -929,7 +933,7 @@ int main()
 
             if (G.state == STATE_HIGHSCORES)  {
                 char line[32];
-                snprintf(line, sizeof(line), "%s %6ld", highscoreMsg, highscore.score);
+                snprintf(line, sizeof(line), "%s %6ld", highscoreMsg, best_score);
 
                 int highscoreW = FW * strlen(line);
                 int highscoreH = FH;

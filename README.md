@@ -1,8 +1,8 @@
 # Xjump 3.0
 
-This is a reimplementation of the classic Xjump game, using SDL instead of X.
-Now that we live in a post-Wayland world, the old implementation was growing
-increasingly obsolete and harder to compile in modern systems.
+This is a reimplementation of the classic Xjump game, using SDL instead of Xlib.
+In a post-Wayland world, the old implementation was growing increasingly
+obsolete and harder to compile on modern systems.
 
 ## New features and improvements
 
