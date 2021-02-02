@@ -1,13 +1,18 @@
 #!/bin/sh
-
 # Script for recompiling and running xjump in a single command.
-# Use only for development
+# Intended for development
 
-if ! grep 'prefix.*=.*build' config.mk > /dev/null 2> /dev/null; then
-    echo >&2 "Please run ./configure --prefix=build"
+if ! [ -e config.mk ]; then
+    echo >&2 "Please run ./configure first"
+    exit 1
+fi
+
+bindir=$(grep '^bindir *=' config.mk | sed 's/[^=]*= *//')
+if [ -z "$bindir" ]; then
+    echo >&2 "Something is wrong. I can't infer the bindir..."
     exit 1
 fi
 
 make || exit $?
 make install > /dev/null || exit $?
-./build/bin/xjump
+"$bindir"/xjump
