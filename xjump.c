@@ -261,7 +261,6 @@ static Input translateHotkey(SDL_Keysym key)
 
 static void init_input()
 {
-    // TODO should we also call this on FOCUS changes?
     K.horizDirection = LR_NEUTRAL;
     for (int i = 0; i < INPUT_OTHER; i++) {
         K.isPressing[i] = false;
@@ -431,7 +430,6 @@ static void init_game()
     }
 }
 
-// TODO: try implementing smooth scroll
 static void scroll()
 {
     generate_floor();
