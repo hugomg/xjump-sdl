@@ -35,6 +35,8 @@
 #include <sys/wait.h>
 
 #include "config.h"
+#define XJUMP_FONTDIR   XJUMP_DATADIR "/xjump"
+#define XJUMP_THEMEDIR  XJUMP_DATADIR "/xjump/themes"
 
 //
 // Helper functions
@@ -62,6 +64,20 @@ static bool isNullOrEmpty(const char *s)
     return (s == NULL) || (*s == '\0');
 }
 
+static char *concat(const char **strs)
+{;
+    size_t len = 0;
+    for (const char **s = strs; *s != NULL; s++) {
+        len += strlen(*s);
+    }
+    char *res = malloc(len+1);
+    res[0] = '\0';
+    for (const char **s = strs; *s != NULL; s++) {
+        strcat(res, *s); // O(N^2) but should not matter
+    }
+    return res;
+}
+
 //
 // Error handling
 // --------------
@@ -78,7 +94,7 @@ static void panic(const char *what, const char *fullError)
 // -------------------------------
 
 int isSmoothScroll = 1;
-const char *themePath = XJUMP_DATADIR "/xjump/theme-jumpnbump.bmp";
+char *themePath = XJUMP_THEMEDIR "/jumpnbump.bmp";
 
 static void print_usage(const char * progname)
 {
@@ -89,10 +105,11 @@ static void print_usage(const char * progname)
            "  -v --version     show version information and exit\n"
            "  --smooth-scroll  use Xjump 3.0 scrolling behavior (default)\n"
            "  --hard-scroll    use Xjump 1.0 scrolling behavior\n"
-           "  --graphic=FILE   use a custom sprite theme\n"
+           "  --theme NAME     use a pre-installed sprite theme (eg. --theme=classic)\n"
+           "  --graphic FILE   use a custom sprite theme (path to a bitmap file)\n"
            "\n"
-           "Some alternate themes can be found in %s.\n",
-           progname, XJUMP_DATADIR);
+           "Alternate themes can be found under %s.\n",
+           progname, XJUMP_THEMEDIR);
 }
 
 static void print_version()
@@ -109,7 +126,8 @@ static void parseCommandLine(int argc, char **argv)
         /* These options don’t set a flag */
         {"help",    no_argument,        0, 'h'},
         {"version", no_argument,        0, 'v'},
-        {"graphic", required_argument,  0, 't'},
+        {"theme",   required_argument,  0, 't'},
+        {"graphic", required_argument,  0, 'g'},
         {0, 0, 0, 0}
     };
 
@@ -127,10 +145,16 @@ static void parseCommandLine(int argc, char **argv)
                 exit(0);
 
             case 'v':
-                print_version(argv[0]);
+                print_version();
                 exit(0);
 
-            case 't':
+            case 't': {
+                const char *ss[] = { XJUMP_THEMEDIR, "/", optarg, ".bmp", NULL };
+                themePath = concat(ss);
+                break;
+            }
+
+            case 'g':
                 themePath = optarg;
                 break;
 
@@ -209,22 +233,25 @@ static FILE *open_local_highscores()
     const char *dirName  = "xjump";
     const char *fileName = "highscores";
 
+    char *localDir = NULL;
+    char *localFilename = NULL;
+
     // Locate the local highscore file, following the XDG spec
     // https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
-    char localDir[PATH_MAX];
     const char *HOME          = getenv("HOME");
     const char *XDG_DATA_HOME = getenv("XDG_DATA_HOME");
     if (!isNullOrEmpty(XDG_DATA_HOME)) {
-        snprintf(localDir, sizeof(localDir), "%s/%s", XDG_DATA_HOME, dirName);
+        const char *ss[] = { XDG_DATA_HOME, "/", dirName, NULL };
+        localDir = concat(ss);
     } else if (!isNullOrEmpty(HOME)) {
-        snprintf(localDir, sizeof(localDir), "%s/.local/share/%s", HOME, dirName);
+        const char *ss[] = { HOME, "/.local/share/", dirName, NULL };
+        localDir = concat(ss);
     } else {
-        return NULL;
+        goto error;
     }
 
-    char localFilename[PATH_MAX];
-    int size = snprintf(localFilename, sizeof(localFilename), "%s/%s", localDir, fileName);
-    if (size < 0 || size >= (int)sizeof(localFilename)) {  return NULL; }
+    const char *ss[] = { localDir, "/", fileName, NULL };
+    localFilename = concat(ss);
 
     // Create the containing directories
     pid_t pid = fork();
@@ -238,7 +265,7 @@ static FILE *open_local_highscores()
         //Parent
         int status;
         waitpid(pid, &status, 0);
-        if (status != 0) return NULL;
+        if (status != 0) goto error;
     }
 
     // Open the local highscore file or create it if it does not already exist.
@@ -247,17 +274,20 @@ static FILE *open_local_highscores()
     // a long game.
     int flags = O_RDWR | O_CREAT;
     int fd = open(localFilename, flags, 0666);
-    if (fd < 0) { return NULL; }
+    if (fd < 0) { goto error; }
     return fdopen(fd, "r+");
+
+error:
+    fprintf(stderr, "Could not open local highscore file. Highcores will not be recorded\n");
+    free(localDir);
+    free(localFilename);
+    return NULL;
 }
 
 static void highscore_init()
 {
     myUid = getuid();
     localHighscores = open_local_highscores();
-    if (!localHighscores) {
-        fprintf(stderr, "Could not open local highscore file. Highcores will not be recorded\n");
-    }
 }
 
 static void highscore_update(int64_t new_score)
@@ -861,7 +891,7 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    SDL_Surface *fontSurface = SDL_LoadBMP(XJUMP_DATADIR "/xjump/ui-font.bmp");
+    SDL_Surface *fontSurface = SDL_LoadBMP(XJUMP_FONTDIR "/ui-font.bmp");
     if (!fontSurface) panic("Could not load font file", SDL_GetError());
 
     SDL_Window *window = SDL_CreateWindow(

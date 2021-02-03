@@ -31,10 +31,10 @@ distclean: clean
 
 install:
 	$(INSTALL_PROGRAM) -D xjump $(DESTDIR)$(bindir)/xjump
-	$(INSTALL_DATA) -D images/ui-font.bmp         $(DESTDIR)$(datadir)/xjump/ui-font.bmp
-	$(INSTALL_DATA) -D images/theme-classic.bmp   $(DESTDIR)$(datadir)/xjump/theme-classic.bmp
-	$(INSTALL_DATA) -D images/theme-ion.bmp       $(DESTDIR)$(datadir)/xjump/theme-ion.bmp
-	$(INSTALL_DATA) -D images/theme-jumpnbump.bmp $(DESTDIR)$(datadir)/xjump/theme-jumpnbump.bmp
+	$(INSTALL_DATA) -D data/ui-font.bmp          $(DESTDIR)$(datadir)/xjump/ui-font.bmp
+	$(INSTALL_DATA) -D data/themes/classic.bmp   $(DESTDIR)$(datadir)/xjump/themes/classic.bmp
+	$(INSTALL_DATA) -D data/themes/ion.bmp       $(DESTDIR)$(datadir)/xjump/themes/ion.bmp
+	$(INSTALL_DATA) -D data/themes/jumpnbump.bmp $(DESTDIR)$(datadir)/xjump/themes/jumpnbump.bmp
 
 uninstall:
 	rm -rf $(DESTDIR)$(bindir)/xjump
