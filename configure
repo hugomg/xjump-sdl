@@ -71,8 +71,8 @@ nl='
 # Command-line parsing
 #
 
-# To keep things simple we require that options with parameter use the --key=val syntax, including
-# the equals sign.  For a list of the relevant directories, see
+# To keep things simple we require that options with parameters use the --key=val syntax, including
+# the equals sign. For a list of the relevant directories, see
 # https://www.gnu.org/software/make/manual/html_node/Directory-Variables.html
 
 prefix=
@@ -80,9 +80,6 @@ bindir=
 datadir=
 variables=
 
-set_prefix=no
-set_bindir=no
-set_datadir=no
 set_sdl_cflags=no
 set_sdl_libs=no
 
@@ -97,17 +94,14 @@ for arg in "$@"; do
 
         --prefix=*)
             prefix=$value
-            set_prefix=yes
             ;;
 
         --bindir=*)
             bindir=$value
-            set_bindir=yes
             ;;
 
         --datadir=*)
             datadir=$value
-            set_datadir=yes
             ;;
 
         -*)
@@ -143,9 +137,9 @@ fi
 # information will be included in the config.h, we have to figure out the
 # absolute paths to them right now. We don't want to give the impression that
 # the user can override the prefix later with `make prefix=blah`.
-[ "$set_prefix" = "no" ]  && prefix="/usr/local"
-[ "$set_bindir" = "no" ]  && bindir="$prefix/bin"
-[ "$set_datadir" = "no" ] && datadir="$prefix/share"
+[ -z "$prefix" ]  && prefix="/usr/local"
+[ -z "$bindir" ]  && bindir="$prefix/bin"
+[ -z "$datadir" ] && datadir="$prefix/share"
 
 prefix=$(absolute "$prefix")   || canonicalization_error --prefix
 bindir=$(absolute "$bindir")   || canonicalization_error --bindir
