@@ -1097,31 +1097,28 @@ int main(int argc, char **argv)
             } else {
                 SDL_RenderSetClipRect(renderer, &gameDst);
 
-                // Predict current hero position
-                int sx, sy; // Inferred coordinates (including scroll)
-                int dy;     // Scroll ammount
+                // Predict current hero position (without scroll)
+                int hx = G.x + (G.vx/2)*((int) frameBudget)/GAME_SPEED;
+                hx = max(hx, leftLimit);
+                hx = min(hx, rightLimit);
+                int hy = G.y + (G.vy)*((int) frameBudget)/GAME_SPEED;
+                if (isStanding(hx, hy)) { hy = collideWithFloor(hy); }
+
+                // Predict current hero position (with scroll)
+                int sx = hx;
+                int sy;
                 if (isSoftScroll) {
-                    int hx = G.x + (G.vx/2)*((int) frameBudget)/GAME_SPEED;
-                    hx = max(hx, leftLimit);
-                    hx = min(hx, rightLimit);
-
-                    int hy = G.y + (G.vy)*((int) frameBudget)/GAME_SPEED;
-                    if (isStanding(hx, hy)) { hy = collideWithFloor(hy); }
-
                     sy = hy + G.forcedScroll + S*G.scrollCount/SCROLL_THRESHOLD;
                     sy = max(sy, topLimit);
-
-                    sx = hx;
-                    dy = sy - hy;
                 } else {
-                    sx = G.x;
+                    // Don't interpolate vertically, to reduce flickering during forced scrolls
+                    hy = G.y;
                     sy = G.y;
-                    dy = 0;
                 }
 
                 // Background
                 const SDL_Rect backgroundSrc = { 0, 0, backgroundW, backgroundH };
-                const SDL_Rect backgroundDst = { gameX, gameY - S*FIELD_EXTRA + dy, backgroundW, backgroundH };
+                const SDL_Rect backgroundDst = { gameX, gameY - S*FIELD_EXTRA + (sy - hy), backgroundW, backgroundH };
                 SDL_RenderCopy(renderer, gameBackground, &backgroundSrc, &backgroundDst);
 
                 // Floors
@@ -1132,7 +1129,7 @@ int main(int argc, char **argv)
                     if (xl <= xr) {
                         int w = xr - xl + 1;
                         const SDL_Rect src = { 0, backgroundH, w*S, S };
-                        const SDL_Rect dst = { gameX + xl*S, gameY + y*S + dy, w*S, S };
+                        const SDL_Rect dst = { gameX + xl*S, gameY + y*S + (sy - hy), w*S, S };
                         SDL_RenderCopy(renderer, gameBackground, &src, &dst);
                     }
                 }
