@@ -21,7 +21,6 @@ pkg-config to figure out the appropriate compilation flags for SDL.
 
 General:
     -h, --help         display this help and exit
-    -v, --version      display version information and exit
 
 Instalation directories:
     --prefix=PREFIX    root installation directory [/usr/local]
@@ -68,28 +67,31 @@ escape_make() {
 nl='
 '
 
+#
 # Command-line parsing
-# To keep things simple we require that options take the form `--key=v`
+#
+
+# To keep things simple we require that options with parameter use the --key=val syntax, including
+# the equals sign.  For a list of the relevant directories, see
+# https://www.gnu.org/software/make/manual/html_node/Directory-Variables.html
+
 prefix=
 bindir=
 datadir=
 variables=
+
 set_prefix=no
 set_bindir=no
 set_datadir=no
 set_sdl_cflags=no
 set_sdl_libs=no
+
 for arg in "$@"; do
     key="${arg%%=*}"
     value="${arg#*=}"
     case "$arg" in
         -h|--help)
             usage
-            exit 0
-            ;;
-
-        -v|--version)
-            echo "Xjump version $version"
             exit 0
             ;;
 
