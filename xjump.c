@@ -93,7 +93,7 @@ static void panic(const char *what, const char *fullError)
 // Command-line arguments & config
 // -------------------------------
 
-int isSmoothScroll = 1;
+int isSoftScroll = 1;
 char *themePath = XJUMP_THEMEDIR "/jumpnbump.bmp";
 
 static void print_usage(const char * progname)
@@ -103,7 +103,7 @@ static void print_usage(const char * progname)
            "\n"
            "  -h --help        show this help message and exit\n"
            "  -v --version     show version information and exit\n"
-           "  --smooth-scroll  use Xjump 3.0 scrolling behavior (default)\n"
+           "  --soft-scroll    use Xjump 3.0 scrolling behavior (default)\n"
            "  --hard-scroll    use Xjump 1.0 scrolling behavior\n"
            "  --theme NAME     use a pre-installed sprite theme (eg. --theme=classic)\n"
            "  --graphic FILE   use a custom sprite theme (path to a bitmap file)\n"
@@ -121,8 +121,8 @@ static void parseCommandLine(int argc, char **argv)
 {
     static struct option long_options[] = {
         /* These options set a flag. */
-        {"smooth-scroll", no_argument, &isSmoothScroll, 1},
-        {"hard-scroll",   no_argument, &isSmoothScroll, 0},
+        {"soft-scroll", no_argument, &isSoftScroll, 1},
+        {"hard-scroll", no_argument, &isSoftScroll, 0},
         /* These options don’t set a flag */
         {"help",    no_argument,        0, 'h'},
         {"version", no_argument,        0, 'v'},
@@ -649,7 +649,7 @@ static void updateRunningGame()
         scroll();
     }
 
-    if (isSmoothScroll) {
+    if (isSoftScroll) {
         if (G.y + G.forcedScroll < topLimit) {
             G.forcedScroll = topLimit - G.y;
             while (G.forcedScroll >= S) {
@@ -1091,7 +1091,7 @@ int main(int argc, char **argv)
                 // Predict current hero position
                 int sx, sy; // Inferred coordinates (including scroll)
                 int dy;     // Scroll ammount
-                if (isSmoothScroll) {
+                if (isSoftScroll) {
                     int hx = G.x + (G.vx/2)*((int) frameBudget)/GAME_SPEED;
                     hx = max(hx, leftLimit);
                     hx = min(hx, rightLimit);
