@@ -35,8 +35,8 @@ Compilation variables:
     LDFLAGS            Linker flags (-L<dir> ...)
     LIBS               Libraries (-l<library> ...)
 
-    SDL2_CFLAGS        Additional flags for compiling with SDL2
-    SDL2_LIBS          Additional flags for linking with SDL2
+    SDL_CFLAGS        Additional flags for compiling with SDL2
+    SDL_LIBS          Additional flags for linking with SDL2
 EOF
 }
 

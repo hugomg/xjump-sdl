@@ -7,8 +7,8 @@
 
 CFLAGS     = -std=c11 -pedantic -Wall -Wextra -O2 -g
 LIBS       =
-SDL2_CFLAGS = `pkg-config sdl2 --cflags`
-SDL2_LIBS   = `pkg-config sdl2 --libs`
+SDL_CFLAGS = `pkg-config sdl2 --cflags`
+SDL_LIBS   = `pkg-config sdl2 --libs`
 
 INSTALL = install
 INSTALL_PROGRAM = $(INSTALL)
@@ -47,10 +47,10 @@ uninstall:
 # -----------
 
 xjump: xjump.o
-	$(CC) $(LDFLAGS) $< $(SDL2_LIBS) $(LIBS) -o $@
+	$(CC) $(LDFLAGS) $< $(SDL_LIBS) $(LIBS) -o $@
 
 xjump.o: xjump.c config.h
-	$(CC) $(CPPFLAGS) $(SDL2_CFLAGS) $(CFLAGS) -c $< -o $@
+	$(CC) $(CPPFLAGS) $(SDL_CFLAGS) $(CFLAGS) -c $< -o $@
 
 config.mk:
 	@echo Please run ./configure first
