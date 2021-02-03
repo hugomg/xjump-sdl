@@ -133,10 +133,15 @@ EOF
     fi
 fi
 
-# Now we compute the final values of the installation directories. Since this
-# information will be included in the config.h, we have to figure out the
-# absolute paths to them right now. We don't want to give the impression that
-# the user can override the prefix later with `make prefix=blah`.
+# Now we compute the final values of the installation directories and hardcode
+# them to the config.mk and the config.h. This is intentionally different from
+# how autoconf does things. They prefer computing the final values of these in
+# the makefile, so that the user is able to override the installation prefix
+# when they call `make` and `make install`. To be honest, I don't think that I
+# agree with them. Setting a different prefix during installation is a recipe
+# for not being able to find the files that we want. Additionally, having the
+# congifuration be in the config.h (as opposed to in -D flags in the makefile)
+# helps my linter figure out what is going on.
 [ -z "$prefix" ]  && prefix="/usr/local"
 [ -z "$bindir" ]  && bindir="$prefix/bin"
 [ -z "$datadir" ] && datadir="$prefix/share"
