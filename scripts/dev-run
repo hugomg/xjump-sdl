@@ -15,4 +15,4 @@ fi
 
 make || exit $?
 make install > /dev/null || exit $?
-"$bindir"/xjump
+"$bindir"/xjump "$@"

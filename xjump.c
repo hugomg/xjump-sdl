@@ -20,6 +20,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <getopt.h>
 #include <inttypes.h>
 #include <limits.h>
 #include <stdbool.h>
@@ -77,6 +78,71 @@ static void panic(const char *what, const char *fullError)
 // -------------------------------
 
 int isSmoothScroll = 1;
+const char *themePath = XJUMP_DATADIR "/xjump/theme-jumpnbump.bmp";
+
+static void print_usage(const char * progname)
+{
+    printf("Usage: %s [OPTIONS]...\n"
+           "A jumping game for X.\n"
+           "\n"
+           "  -h --help        show this help message and exit\n"
+           "  -v --version     show version information and exit\n"
+           "  --smooth-scroll  use Xjump 3.0 scrolling behavior (default)\n"
+           "  --hard-scroll    use Xjump 1.0 scrolling behavior\n"
+           "  --graphic=FILE   use a custom sprite theme\n"
+           "\n"
+           "Some alternate themes can be found in %s.\n",
+           progname, XJUMP_DATADIR);
+}
+
+static void print_version()
+{
+    printf("Xjump version %s\n", XJUMP_VERSION);
+}
+
+static void parseCommandLine(int argc, char **argv)
+{
+    static struct option long_options[] = {
+        /* These options set a flag. */
+        {"smooth-scroll", no_argument, &isSmoothScroll, 1},
+        {"hard-scroll",   no_argument, &isSmoothScroll, 0},
+        /* These options don’t set a flag */
+        {"help",    no_argument,        0, 'h'},
+        {"version", no_argument,        0, 'v'},
+        {"graphic", required_argument,  0, 't'},
+        {0, 0, 0, 0}
+    };
+
+    while (1) {
+        int option_index = 0;
+        int c = getopt_long (argc, argv, "hvt:", long_options, &option_index);
+        if (c == -1) break;
+        switch (c) {
+            case 0:
+                // Set a flag
+                break;
+
+            case 'h':
+                print_usage(argv[0]);
+                exit(0);
+
+            case 'v':
+                print_version(argv[0]);
+                exit(0);
+
+            case 't':
+                themePath = optarg;
+                break;
+
+            case '?':
+                // getopt_long already printed an error message
+                exit(1);
+
+            default:
+                abort(); // Shoulr never happen
+        }
+    }
+}
 
 //
 // Random Number Generator
@@ -718,8 +784,11 @@ static const SDL_Rect heroSprite[8] = {
     { 3*R, 1*R, R, R}, // Fall R
 };
 
-int main()
+int main(int argc, char **argv)
 {
+    // Configuration
+    parseCommandLine(argc, argv);
+
     // Initialize subsystems
 
     if (0 != SDL_Init(SDL_INIT_VIDEO))
@@ -784,11 +853,13 @@ int main()
 
     // Load SDL resources
 
-    // TODO: make the theme customizable
-    // TODO: make the classic theme the default
     // TODO: redraw the jumpnbump theme with better images
-    SDL_Surface *spritesSurface = SDL_LoadBMP(XJUMP_DATADIR "/xjump/theme-jumpnbump.bmp");
-    if (!spritesSurface) panic("Could not load sprite file ", SDL_GetError());
+    SDL_Surface *spritesSurface = SDL_LoadBMP(themePath);
+    if (!spritesSurface) {
+        // Not being able to open a custom theme is an error, but not a panic
+        fprintf(stderr, "%s\n", SDL_GetError());
+        exit(1);
+    }
 
     SDL_Surface *fontSurface = SDL_LoadBMP(XJUMP_DATADIR "/xjump/ui-font.bmp");
     if (!fontSurface) panic("Could not load font file", SDL_GetError());
