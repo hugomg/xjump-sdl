@@ -814,6 +814,20 @@ static const SDL_Rect heroSprite[8] = {
     { 3*R, 1*R, R, R}, // Fall R
 };
 
+SDL_Surface *loadThemeFile(const char *filename)
+{
+    SDL_Surface *surface = SDL_LoadBMP(filename);
+    if (!surface) {
+        fprintf(stderr, "Error loading theme file. %s\n.", SDL_GetError());
+        return NULL;
+    }
+    if (surface->w != 4*R + S || surface->h != 2*R) {
+        fprintf(stderr, "Theme spritesheet has the wrong dimensions.\n");
+        return NULL;
+    }
+    return surface;
+}
+
 int main(int argc, char **argv)
 {
     // Configuration
@@ -883,13 +897,8 @@ int main(int argc, char **argv)
 
     // Load SDL resources
 
-    // TODO: redraw the jumpnbump theme with better images
-    SDL_Surface *spritesSurface = SDL_LoadBMP(themePath);
-    if (!spritesSurface) {
-        // Not being able to open a custom theme is an error, but not a panic
-        fprintf(stderr, "%s\n", SDL_GetError());
-        exit(1);
-    }
+    SDL_Surface *spritesSurface = loadThemeFile(themePath);
+    if (!spritesSurface) { exit(1); }
 
     SDL_Surface *fontSurface = SDL_LoadBMP(XJUMP_FONTDIR "/ui-font.bmp");
     if (!fontSurface) panic("Could not load font file", SDL_GetError());
