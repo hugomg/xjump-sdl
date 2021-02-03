@@ -1095,8 +1095,10 @@ int main(int argc, char **argv)
                 if (hx > rightLimit) { hx = rightLimit; }
                 if (isStanding(hx, hy)) { hy = collideWithFloor(hy); }
                 int sx = hx; // screen coordinates
-                int sy = hy + (isSmoothScroll ? G.forcedScroll + S*G.scrollCount/SCROLL_THRESHOLD : 0);
-                if (sy < topLimit) { sy = topLimit; }
+                int sy = hy;
+                if (isSmoothScroll) {
+                    sy = max(topLimit, hy + G.forcedScroll + S*G.scrollCount/SCROLL_THRESHOLD);
+                }
 
                 // Background
                 const SDL_Rect backgroundSrc = { 0, 0, backgroundW, backgroundH };
