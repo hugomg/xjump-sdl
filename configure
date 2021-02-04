@@ -128,7 +128,7 @@ done
 # start with a "~". They can be problematic because shell tilde expansion only
 # happens if the tilde is at the start of the word. The end result is that
 # the tilde is expanded when we present the installation paths to the user but
-# it does not always get expanded when those paths are used in the Makefile.
+# it does not always get expanded when those paths are used in other places.
 
 for varname in prefix bindir datadir; do
     eval "value=\$$varname"
@@ -140,11 +140,11 @@ for varname in prefix bindir datadir; do
             # Assume that variable expansions will become an absolute path
             ;;
         \~*)
-            echo >&2 "ERROR: Please write \$HOME instead of ~ for the $varname."
+            echo >&2 "ERROR: Please write \$HOME instead of ~ for the --$varname."
             exit 1
             ;;
         *)
-            echo >&2 "ERROR: Please specify an absolute directory for the $varname."
+            echo >&2 "ERROR: Please specify an absolute path for the --$varname."
             exit 1
             ;;
     esac
