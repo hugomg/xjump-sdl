@@ -87,15 +87,15 @@ for arg in "$@"; do
             exit 0
             ;;
 
-        --prefix=*)
+        --prefix=*|prefix=*)
             prefix=$value
             ;;
 
-        --bindir=*)
+        --bindir=*|bindir=*)
             bindir=$value
             ;;
 
-        --datadir=*)
+        --datadir=*|datadir=*)
             datadir=$value
             ;;
 
