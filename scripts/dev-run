@@ -7,16 +7,6 @@ if ! [ -e config.mk ]; then
     exit 1
 fi
 
-get_var() {
-    grep "^$1 *=" config.mk | sed 's/[^=]*= *//'
-}
-
-prefix=$(get_var prefix)
-bindir=$(get_var bindir)
-
-eval prefix="$prefix"
-eval bindir="$bindir"
-
-make || exit $?
-make install > /dev/null || exit $?
-"$bindir"/xjump "$@"
+install_output=$(make && make install) || exit $?
+executable=$(echo "$install_output" | awk '/bin\/xjump/ { print $NF }')
+"$executable" "$@"
