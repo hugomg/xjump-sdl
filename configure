@@ -1,10 +1,11 @@
 #!/bin/sh
 
-version='3.0'
-
-#
-# Functions
-#
+# Help message
+# ------------
+# The command line flags for this congfigure script are inspired by the GNU
+# conventions. You can find more info about that in the following links:
+# https://www.gnu.org/prep/standards/html_node/Configuration.html
+# https://www.gnu.org/software/make/manual/html_node/Makefile-Conventions.html
 
 usage() {
     cat <<EOF
@@ -40,48 +41,42 @@ Compilation variables:
 EOF
 }
 
-absolute() {
-    # Convert an installation directory to an absolute path.
-    # Since some distros don't have realpath, only try calling if if we actually need to.
-    # Note: the installation directory might not exist, so we cannot use `readlink -f`
-    case "$1" in
-        /*) printf "%s" "$1";;
-        *) realpath -m "$1";;
-    esac
-}
 
-canonicalization_error() {
-    echo >&2 "Please specify an absolute path for $1."
-    echo >&2 "We tried using realpath to get an absolute path but that did not work."
-    exit 1
-}
+# Default values
+# --------------
+# Note that all the following strings are single quoted. Believe it or not,
+# everything that you pass as a parameter to make will eventually go through
+# Make macro expansion followed by Shell word expansion. Don't entertain the
+# notion that these compiler flags and installation directories are just plain
+# strings. Any parameters containing special characters like $ or spaces will
+# be ruthlessly macro expanded and word split as soon as the makefile tries to
+# use them, whether you like it or not. Anyway, the GNU conventions use this
+# feature intentionally when setting the default values for the installation
+# directories. This way, if the user overrides the root prefix when they call
+# `make` then it updates the other definitions too.
 
-escape_c() {
-    printf "%s" "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'
-}
+version='3.0'
 
-escape_make() {
-    printf "%s" "$1" | sed -e 's/\\/\\\\/g' -e 's/\$/$$/g' -e 's/#/\\#/g'
-}
+prefix='/usr/local'
+bindir='${prefix}/bin'
+datadir='${prefix}/share'
 
-nl='
-'
-
-#
-# Command-line parsing
-#
-
-# To keep things simple we require that options with parameters use the --key=val syntax, including
-# the equals sign. For a list of the relevant directories, see
-# https://www.gnu.org/software/make/manual/html_node/Directory-Variables.html
-
-prefix=
-bindir=
-datadir=
-variables=
+sdl_cflags=
+sdl_libs=
+othervars=
 
 set_sdl_cflags=no
 set_sdl_libs=no
+set_othervars=no
+
+
+# Command-line parsing
+# --------------------
+# To keep things simple we require that options with parameters use the
+# --key=value notation. Please don't use --key value, whithout the "=".
+
+nl='
+'
 
 for arg in "$@"; do
     key="${arg%%=*}"
@@ -109,64 +104,81 @@ for arg in "$@"; do
             exit 1
             ;;
 
+        SDL_CFLAGS=*)
+            sdl_cflags=$value
+            set_sdl_cflags=yes
+            ;;
+
+        SDL_LIBS=*)
+            sdl_libs=$value
+            set_sdl_cflags=yes
+            ;;
+
         *=*)
-            line="${key} = $(escape_make "$value")"
-            variables="${variables}${nl}${line}"
-            if [ "$key" = "SDL_CFLAGS" ]; then set_sdl_cflags=yes; fi
-            if [ "$key" = "SDL_LIBS" ];   then set_sdl_libs=yes; fi
+            othervars="${othervars}${key} = ${value}${nl}"
+            set_othervars=yes
             ;;
     esac
 done
 
-# Check for the required dependencies. As a concession for people who don't
-# have pkg-config set up, assume that the library is installed if the user is
-# setting the relevant compilation flags by hand.
+
+# Check for dependencies
+# ----------------------
+# As a concession for people who don't have pkg-config set up, assume that the
+# library is installed if the user is setting the relevant compilation flags.
+
 if [ "$set_sdl_cflags" = no ] || [ "$set_sdl_libs" = no ]; then
     if ! pkg-config sdl2 --exists; then
         cat >&2 <<EOF
 ERROR: pkg-config could not find the header files for SDL2.
 If the dev package of SDL2 is not already installed, please install it first.
-If it is already installed, please call configure again specifying values for
-SDL_CFLAGS and SDL_LIBS so that we can know where to find it.
+If it is already installed, one way to avoid this error is to call configure
+again while specifying appropriate values for the SDL_CFLAGS and SDL_LIBS
+compilation variables.
 EOF
         exit 1
     fi
 fi
 
-# Now we compute the final values of the installation directories and hardcode
-# them to the config.mk and the config.h. This is intentionally different from
-# how autoconf does things. They prefer computing the final values of these in
-# the makefile, so that the user is able to override the installation prefix
-# when they call `make` and `make install`. To be honest, I don't think that I
-# agree with them. Setting a different prefix during installation is a recipe
-# for not being able to find the files that we want. Additionally, having the
-# congifuration be in the config.h (as opposed to in -D flags in the makefile)
-# helps my linter figure out what is going on.
-[ -z "$prefix" ]  && prefix="/usr/local"
-[ -z "$bindir" ]  && bindir="$prefix/bin"
-[ -z "$datadir" ] && datadir="$prefix/share"
+if [ "$set_sdl_cflags" = no ]; then
+    sdl_cflags=$(pkg-config sdl2 --cflags)
+fi
 
-prefix=$(absolute "$prefix")   || canonicalization_error --prefix
-bindir=$(absolute "$bindir")   || canonicalization_error --bindir
-datadir=$(absolute "$datadir") || canonicalization_error --datadir
+if [ "$set_sdl_libs" = no ]; then
+    sdl_libs=$(pkg-config sdl2 --libs)
+fi
 
-# Finally, store the information where the makefile can see it and tell the
-# user where things are going to be installed.
+
+# Generate the config.mk
+# ----------------------
+# Store the information where the makefile can see it. The advantage of using
+# an include file for the configuration, as opposed to generating the entire
+# mkefile from a template, is that we don't need to rerun the configure script
+# if we make changes to the makefile.
+
 cat > config.mk <<EOF
 # Generated by the ./configure script
-version = $(escape_make "$version")
-prefix  = $(escape_make "$prefix")
-bindir  = $(escape_make "$bindir")
-datadir = $(escape_make "$datadir")$variables
+version = $version
+prefix  = $prefix
+bindir  = $bindir
+datadir = $datadir
+SDL_CFLAGS = $sdl_cflags
+SDL_LIBS   = $sdl_libs
 EOF
+if [ "$othervars" ]; then
+    printf "%s" "$othervars" >> config.mk
+fi
 
-cat > config.h <<EOF
-/* Generated by the ./configure script */
-#define XJUMP_VERSION "$(escape_c "$version")"
-#define XJUMP_PREFIX  "$(escape_c "$prefix")"
-#define XJUMP_BINDIR  "$(escape_c "$bindir")"
-#define XJUMP_DATADIR "$(escape_c "$datadir")"
-EOF
+# Report the results
+# ------------------
+# Finally, tell the user where things are going to be installed, showing the
+# actual directories without the ${} indirections. If you think that eval is
+# weird, remember that the makefile also treats these variables as shell code
+# then it expands them.
+
+eval prefix="${prefix}"
+eval bindir="${bindir}"
+eval datadir="${datadir}"
 
 cat <<EOF
 Configuration sucessful.
@@ -174,7 +186,16 @@ Run \`make\` and \`sudo make install\` to continue the installation.
 
 Xjump will be installed to       : ${prefix}
 Xjump will install executables in: ${bindir}
-Xjump will install data files in : ${datadir}$variables
+Xjump will install data files in : ${datadir}
 EOF
+if [ "$set_sdl_cflags" = yes ]; then
+    echo "SDL_CFLAGS = $sdl_cflags"
+fi
+if [ "$set_sdl_libs" = yes ]; then
+    echo "SDL_LIBS = $sdl_libs"
+fi
+if [ "$set_othervars" = yes ]; then
+    printf "%s" "$othervars"
+fi
 
 exit 0

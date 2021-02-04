@@ -7,11 +7,15 @@ if ! [ -e config.mk ]; then
     exit 1
 fi
 
-bindir=$(grep '^bindir *=' config.mk | sed 's/[^=]*= *//')
-if [ -z "$bindir" ]; then
-    echo >&2 "Something is wrong. I can't infer the bindir..."
-    exit 1
-fi
+get_var() {
+    grep "^$1 *=" config.mk | sed 's/[^=]*= *//'
+}
+
+prefix=$(get_var prefix)
+bindir=$(get_var bindir)
+
+eval prefix="$prefix"
+eval bindir="$bindir"
 
 make || exit $?
 make install > /dev/null || exit $?
