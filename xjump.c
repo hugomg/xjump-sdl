@@ -615,56 +615,75 @@ static const SDL_Color scoreBorderColor = { 255, 255, 255, 255 };
 // Text rendering
 // --------------
 //
-// To preserve the classic Xjump look, we ship with a copy of the font that the
-// original used: courBO18 (Courier, 18pt, Bold, Oblique), the 100dpi variant.
-// On Fedora it can be installed with sdnf install xorg-x11-fonts-100dpi.
+// To preserve the classic Xjump look, we ship with a copies of the fonts that
+// the original used. On Fedora you needed package xorg-x11-fonts-100dpi.
 //
-// We do have to use a bitmapped font here. Originally I tried using the
-// SDL_TTF library to render the text because I was interested in being able to
-// render UTF-8 user names. However, the TrueType fonts only looked nice at a
-// small font size if we used anti-aliasing, which ruined the Xjump "look". Not
-// to mention the headache of finding the font file. We'd probably need to ship
-// our own font to avoid adding depending on the system fonts...
+//   - Courrier Bold Oblique 18pt, 100dpi variant (courBO18)
+//   - FixedMedim 10x20
 //
-// In our font bitmap file the glyphs are horizontally spaced slightly farther
-// apart than they are in normal text. This is because this is an italic font
-// and each glyph can spill a bit into the glyph to its right.
+// To accurately emulate the classic Xjump look we need to use bitmapped fonts.
+// I experimented with using the SDL_TTF library to render the text but the
+// True Type fonts only looked nice if we used antialiasing and that doesn't
+// match the look that we want... Not to mention that the fonts are not the
+// same as the original and that locating system fonts on Linux is a pain.
+// The big downside of bitmapped fonts is that they can't represent special
+// characters. We are effectively restricted to ACII.
+//
+// On the matter of font dimensions, both of our fonts are monospaced, where
+// the text is arranged in a rectangular grid. However, one subtlety is that in
+// the oblique font each letter might reach into the text box for the glyph to
+// their right. For this reason, the glyphs in the font file might be arranged
+// farther apart than they are in the text.
 
-static const int FW = 15; // Width of each glyph in the text
-static const int FH = 25; // Height of each glyph in the text
+typedef struct {
+    int w, h;   // Dimensions in the text
+    int ow, oh; // Dimentions in the sprite file
+} FontSize;
 
-static const int FBW = 20; // Width of each glyph in the font bitmap file
-static const int FBH = 25; // Height of each glyph in the font bitmap file
-
-static const int boxBorder = 4;
-static const int boxPaddingTop    = 7;
-static const int boxPaddingBottom = 5;
-static const int boxPaddingLeft   = 4;
-static const int boxPaddingRight  = 4;
-
-static void draw_text(
+static void text_draw_line(
         SDL_Renderer *renderer,
         SDL_Texture *font,
+        const FontSize *fz,
         const char *message,
-        SDL_Color color,
         const SDL_Rect *where)
 {
-    // This method of setting the final color assumes that the font color in
-    // the original texture is white.
-    SDL_SetTextureColorMod(font, color.r, color.g, color.b);
+    int w  = fz->w;
+    int h  = fz->h;
+    int ow = fz->ow;
+    int oh = fz->oh;
+
+    int x = where->x;
+    int y = where->y;
 
     for (int i = 0; message[i] != '\0'; i++) {
         char c = message[i];
         if (c < ' ' || '~' < c) { c = 127; } // Default glyph
-        int ii = (c - ' ') / 16;
-        int jj = (c - ' ') % 16;
-        const SDL_Rect src = { jj*FBW, ii*FBH, FBW, FBH };
-        const SDL_Rect dst = { where->x + FW*i, where->y, FBW, FBH };
+        int oi = (c - ' ') % 16;
+        int oj = (c - ' ') / 16;
+        const SDL_Rect src = { oi*ow, oj*oh, ow, oh };
+        const SDL_Rect dst = { x + i*w, y + 0*h, ow, oh };
         SDL_RenderCopy(renderer, font, &src, &dst);
     }
 }
 
-static void draw_text_box(SDL_Renderer *renderer, const SDL_Rect *content)
+static void text_set_color(SDL_Texture *font, SDL_Color color)
+{
+    // This method of setting colors assumes that the original texture has
+    // white text on a transparent background.
+    SDL_SetTextureColorMod(font, color.r, color.g, color.b);
+}
+
+
+// Boxes around text
+// -------------------------
+
+#define boxBorder 4
+#define boxPaddingTop    7
+#define boxPaddingBottom 5
+#define boxPaddingLeft   4
+#define boxPaddingRight  4
+
+static void text_draw_box(SDL_Renderer *renderer, const SDL_Rect *content)
 {
     const SDL_Rect padding = {
         content->x - boxPaddingLeft,
@@ -760,13 +779,16 @@ int main(int argc, char **argv)
 
     // Widths and Heights
 
-    const int titleW      = FW * strlen(titleMsg);
-    const int scoreLabelW = FW * strlen(scoreLabelMsg);
-    const int copyrightW  = FW * strlen(copyrightMsg);
-    const int gameOverW   = FW * strlen(gameOverMsg);
-    const int pauseW      = FW * strlen(pauseMsg);
+    static const FontSize uiFZ = { 15, 25, 20, 25 };
+    static const FontSize hsFZ = { 10, 20, 10, 20 };
 
-    const int textBoxH = FH + boxBorder + boxPaddingLeft + boxPaddingRight  + boxBorder;
+    const int titleW      = uiFZ.w * strlen(titleMsg);
+    const int scoreLabelW = uiFZ.w * strlen(scoreLabelMsg);
+    const int copyrightW  = uiFZ.w * strlen(copyrightMsg);
+    const int gameOverW   = uiFZ.w * strlen(gameOverMsg);
+    const int pauseW      = uiFZ.w * strlen(pauseMsg);
+
+    const int textBoxH = uiFZ.h + boxBorder + boxPaddingLeft + boxPaddingRight  + boxBorder;
 
     const int gameW = S * FIELD_W;
     const int gameH = S * FIELD_H;
@@ -774,11 +796,11 @@ int main(int argc, char **argv)
     const int backgroundW = S * FIELD_W;
     const int backgroundH = S * (FIELD_H + FIELD_EXTRA);
 
-    const int scoreDigitsW = NscoreDigits * FW;
-    const int scoreW = scoreLabelW + FW + scoreDigitsW;
+    const int scoreDigitsW = uiFZ.w * NscoreDigits;
+    const int scoreW = scoreLabelW + uiFZ.w + scoreDigitsW;
 
     const int windowW = windowMarginLeft + gameW + windowMarginRight;
-    const int windowH = windowMarginTop + 3*windowMarginInner + textBoxH + 2*FH + + gameH + windowMarginBottom;
+    const int windowH = windowMarginTop + 3*windowMarginInner + textBoxH + 2*uiFZ.h + + gameH + windowMarginBottom;
 
     // Screen positions
 
@@ -788,25 +810,25 @@ int main(int argc, char **argv)
     const int copyrightX = (windowW - copyrightW)/2;
 
     const int titleY     = windowMarginTop + boxBorder + boxPaddingTop;
-    const int scoreY     = titleY + FH + boxPaddingBottom + boxBorder + windowMarginInner;
-    const int gameY      = scoreY + FH + windowMarginInner;
+    const int scoreY     = titleY + uiFZ.h + boxPaddingBottom + boxBorder + windowMarginInner;
+    const int gameY      = scoreY + uiFZ.h + windowMarginInner;
     const int copyrightY = gameY + gameH + windowMarginInner;
 
     const int scoreLabelX  = scoreX;
-    const int scoreDigitsX = scoreX + scoreLabelW + FW;
+    const int scoreDigitsX = scoreX + scoreLabelW + uiFZ.w;
 
     const int gameOverX = gameX + (gameW - gameOverW)/2;
-    const int gameOverY = gameY + (gameH - FH)*2/5;
+    const int gameOverY = gameY + (gameH - uiFZ.h)*2/5;
 
     const int pauseX = gameX + (gameW - pauseW)/2;
-    const int pauseY = gameY + (gameH - FH)*2/5;
+    const int pauseY = gameY + (gameH - uiFZ.h)*2/5;
 
-    const SDL_Rect titleDst       = { titleX, titleY, titleW, FH };
-    const SDL_Rect scoreLabelDst  = { scoreLabelX, scoreY, scoreLabelW, FH };
-    const SDL_Rect scoreDigitsDst = { scoreDigitsX, scoreY, scoreDigitsW, FH };
-    const SDL_Rect copyrightDst   = { copyrightX, copyrightY, copyrightW, FH };
-    const SDL_Rect gameOverDst    = { gameOverX, gameOverY, gameOverW, FH };
-    const SDL_Rect pauseDst       = { pauseX, pauseY, pauseW, FH };
+    const SDL_Rect titleDst       = { titleX, titleY, titleW, uiFZ.h };
+    const SDL_Rect scoreLabelDst  = { scoreLabelX, scoreY, scoreLabelW, uiFZ.h };
+    const SDL_Rect scoreDigitsDst = { scoreDigitsX, scoreY, scoreDigitsW, uiFZ.h };
+    const SDL_Rect copyrightDst   = { copyrightX, copyrightY, copyrightW, uiFZ.h };
+    const SDL_Rect gameOverDst    = { gameOverX, gameOverY, gameOverW, uiFZ.h };
+    const SDL_Rect pauseDst       = { pauseX, pauseY, pauseW, uiFZ.h };
     const SDL_Rect gameDst        = { gameX, gameY, gameW, gameH };
 
     // Load SDL resources
@@ -814,8 +836,11 @@ int main(int argc, char **argv)
     SDL_Surface *spritesSurface = loadThemeFile(themePath);
     if (!spritesSurface) { exit(1); }
 
-    SDL_Surface *fontSurface = SDL_LoadBMP(XJUMP_FONTDIR "/ui-font.bmp");
-    if (!fontSurface) panic("Could not load font file", SDL_GetError());
+    SDL_Surface *uiFontSurface = SDL_LoadBMP(XJUMP_FONTDIR "/font-ui.bmp");
+    if (!uiFontSurface) panic("Could not load font file", SDL_GetError());
+
+    SDL_Surface *hsFontSurface = SDL_LoadBMP(XJUMP_FONTDIR "/font-hs.bmp");
+    if (!hsFontSurface) panic("Could not load font file", SDL_GetError());
 
     SDL_Window *window = SDL_CreateWindow(
         /*title*/ "xjump",
@@ -833,12 +858,16 @@ int main(int argc, char **argv)
     SDL_Texture *sprites = SDL_CreateTextureFromSurface(renderer, spritesSurface);
     if (!sprites) panic("Could not create texture", SDL_GetError());
 
-    SDL_Texture *font = SDL_CreateTextureFromSurface(renderer, fontSurface);
-    if (!font) panic("Could not create texture", SDL_GetError());
+    SDL_Texture *uiFont = SDL_CreateTextureFromSurface(renderer, uiFontSurface);
+    if (!uiFont) panic("Could not create texture", SDL_GetError());
+
+    SDL_Texture *hsFont = SDL_CreateTextureFromSurface(renderer, hsFontSurface);
+    if (!hsFont) panic("Could not create texture", SDL_GetError());
 
     // At this point, everything we need is loaded to textures
     SDL_FreeSurface(spritesSurface);
-    SDL_FreeSurface(fontSurface);
+    SDL_FreeSurface(uiFontSurface);
+    SDL_FreeSurface(hsFontSurface);
 
     // Create background textures with all the things that don't change from
     // frame to frame. This reduces the number of draw calls in the inner loop.
@@ -852,16 +881,21 @@ int main(int argc, char **argv)
             backgroundW, backgroundH + S);
     if (!gameBackground) panic("Could not create game background texture", SDL_GetError());
 
+    text_set_color(uiFont, textColor);
+
     {
         SDL_SetRenderTarget(renderer, windowBackground);
 
         SDL_SetRenderDrawColor(renderer, backgroundColor.r,  backgroundColor.g, backgroundColor.b, backgroundColor.a);
         SDL_RenderClear(renderer);
 
-        draw_text_box(renderer, &titleDst);
-        draw_text(renderer, font, titleMsg, textColor, &titleDst);
-        draw_text(renderer, font, scoreLabelMsg, textColor, &scoreLabelDst);
-        draw_text(renderer, font, copyrightMsg, copyrightColor, &copyrightDst);
+        text_draw_box(renderer, &titleDst);
+        text_draw_line(renderer, uiFont, &uiFZ, titleMsg, &titleDst);
+        text_draw_line(renderer, uiFont, &uiFZ, scoreLabelMsg, &scoreLabelDst);
+
+        text_set_color(uiFont, copyrightColor);
+        text_draw_line(renderer, uiFont, &uiFZ, copyrightMsg, &copyrightDst);
+        text_set_color(uiFont, textColor);
 
         SDL_RenderPresent(renderer);
         SDL_SetRenderTarget(renderer, NULL);
@@ -972,6 +1006,7 @@ int main(int argc, char **argv)
         while (frameBudget >= GAME_SPEED) {
             frameBudget -= GAME_SPEED;
             updateGame();
+            // TODO fix scroll skip during pause
         }
 
         //
@@ -987,14 +1022,14 @@ int main(int argc, char **argv)
 
             char scoreDigits[32];
             snprintf(scoreDigits, sizeof(scoreDigits), "%010ld", G.score);
-            draw_text(renderer, font, scoreDigits, textColor, &scoreDigitsDst);
+            text_draw_line(renderer, uiFont, &uiFZ, scoreDigits, &scoreDigitsDst);
 
             if (G.state == STATE_HIGHSCORES)  {
                 char line[32];
                 snprintf(line, sizeof(line), "%s %6ld", highscoreMsg, best_score);
 
-                int highscoreW = FW * strlen(line);
-                int highscoreH = FH;
+                int highscoreW = hsFZ.w * strlen(line);
+                int highscoreH = hsFZ.h;
                 int highscoreX = gameX + (gameW - highscoreW)/2;
                 int highscoreY = gameY + (gameH - highscoreH)/2;
 
@@ -1006,7 +1041,7 @@ int main(int argc, char **argv)
                 SDL_RenderFillRect(renderer, &innerRect);
 
                 const SDL_Rect dst = { highscoreX, highscoreY, highscoreW, highscoreH };
-                draw_text(renderer, font, line, textColor, &dst);
+                text_draw_line(renderer, hsFont, &hsFZ, line, &dst);
 
             } else {
                 SDL_RenderSetClipRect(renderer, &gameDst);
@@ -1058,12 +1093,12 @@ int main(int argc, char **argv)
 
                 // Text box
                 if (G.state == STATE_GAMEOVER) {
-                    draw_text_box(renderer, &gameOverDst);
-                    draw_text(renderer, font, gameOverMsg, textColor, &gameOverDst);
+                    text_draw_box(renderer, &gameOverDst);
+                    text_draw_line(renderer, uiFont, &uiFZ, gameOverMsg, &gameOverDst);
                 }
                 if (G.state == STATE_PAUSED) {
-                    draw_text_box(renderer, &pauseDst);
-                    draw_text(renderer, font, pauseMsg, textColor, &pauseDst);
+                    text_draw_box(renderer, &pauseDst);
+                    text_draw_line(renderer, uiFont, &uiFZ, pauseMsg, &pauseDst);
                 }
 
                 SDL_RenderSetClipRect(renderer, NULL);

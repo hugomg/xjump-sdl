@@ -26,7 +26,8 @@ distclean: clean
 
 install:
 	$(INSTALL_PROGRAM) -D xjump $(DESTDIR)$(bindir)/xjump
-	$(INSTALL_DATA) -D data/ui-font.bmp          $(DESTDIR)$(datadir)/xjump/ui-font.bmp
+	$(INSTALL_DATA) -D data/font-hs.bmp          $(DESTDIR)$(datadir)/xjump/font-hs.bmp
+	$(INSTALL_DATA) -D data/font-ui.bmp          $(DESTDIR)$(datadir)/xjump/font-ui.bmp
 	$(INSTALL_DATA) -D data/themes/classic.bmp   $(DESTDIR)$(datadir)/xjump/themes/classic.bmp
 	$(INSTALL_DATA) -D data/themes/ion.bmp       $(DESTDIR)$(datadir)/xjump/themes/ion.bmp
 	$(INSTALL_DATA) -D data/themes/jumpnbump.bmp $(DESTDIR)$(datadir)/xjump/themes/jumpnbump.bmp
