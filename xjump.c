@@ -174,12 +174,8 @@ static void parseCommandLine(int argc, char **argv)
 static uint64_t pcgState = 0x853c49e6748fea9bULL; // Mutable state of the RNG
 static uint64_t pcgSeq   = 0xda3e39cb94b95bdbULL; // PCG "sequence" parameter
 
-static void pcg32_init()
+static void pcg32_init(int64_t seed[2])
 {
-    int64_t seed[2];
-    ssize_t nread = getrandom(seed, sizeof(seed), GRND_NONBLOCK);
-    if (nread == -1) panic("Could not initialize RNG", strerror(errno));
-
     pcgState = seed[0];
     pcgSeq = (seed[1] << 1) | 1;
 }
@@ -754,7 +750,11 @@ int main(int argc, char **argv)
         panic("Could not initialize SDL", SDL_GetError());
     atexit(SDL_Quit);
 
-    pcg32_init();
+    int64_t seed[2];
+    ssize_t nread = getrandom(seed, sizeof(seed), GRND_NONBLOCK);
+    if (nread == -1) panic("Could not initialize RNG", strerror(errno));
+
+    pcg32_init(seed);
     init_input();
     init_game();
 
