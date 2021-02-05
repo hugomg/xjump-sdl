@@ -59,11 +59,6 @@ static int mod(int n, int m)
     return (r >= 0 ? r : r + m);
 }
 
-static bool isNullOrEmpty(const char *s)
-{
-    return (s == NULL) || (*s == '\0');
-}
-
 static char *concat(const char **strs)
 {;
     size_t len = 0;
@@ -224,91 +219,11 @@ static uint32_t rnd(uint32_t a, uint32_t b)
 // TODO: use flock
 // (See the original xjump code)
 
-static uid_t myUid;
-FILE *localHighscores;
-int64_t best_score;
+int64_t best_score = 0;
 
-static FILE *open_local_highscores()
+static void highscore_update(int64_t score)
 {
-    const char *dirName  = "xjump";
-    const char *fileName = "highscores";
-
-    char *localDir = NULL;
-    char *localFilename = NULL;
-
-    // Locate the local highscore file, following the XDG spec
-    // https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
-    const char *HOME          = getenv("HOME");
-    const char *XDG_DATA_HOME = getenv("XDG_DATA_HOME");
-    if (!isNullOrEmpty(XDG_DATA_HOME)) {
-        const char *ss[] = { XDG_DATA_HOME, "/", dirName, NULL };
-        localDir = concat(ss);
-    } else if (!isNullOrEmpty(HOME)) {
-        const char *ss[] = { HOME, "/.local/share/", dirName, NULL };
-        localDir = concat(ss);
-    } else {
-        goto error;
-    }
-
-    const char *ss[] = { localDir, "/", fileName, NULL };
-    localFilename = concat(ss);
-
-    // Create the containing directories
-    pid_t pid = fork();
-    if (pid == -1) panic("Could not fork", strerror(errno));
-    if (pid == 0) {
-        // Child
-        char *argv[] = { "mkdir", "-p", localDir, NULL };
-        execvp("mkdir", argv); // This call normally does not return
-        exit(1);
-    } else {
-        //Parent
-        int status;
-        waitpid(pid, &status, 0);
-        if (status != 0) goto error;
-    }
-
-    // Open the local highscore file or create it if it does not already exist.
-    // We need to use low level open() to this precise combination of RW plus
-    // file creation. If we get an error, it's better to get it now than after
-    // a long game.
-    int flags = O_RDWR | O_CREAT;
-    int fd = open(localFilename, flags, 0666);
-    if (fd < 0) { goto error; }
-    return fdopen(fd, "r+");
-
-error:
-    fprintf(stderr, "Could not open local highscore file. Highcores will not be recorded\n");
-    free(localDir);
-    free(localFilename);
-    return NULL;
-}
-
-static void highscore_init()
-{
-    myUid = getuid();
-    localHighscores = open_local_highscores();
-}
-
-static void highscore_update(int64_t new_score)
-{
-    if (localHighscores){
-        FILE *f = localHighscores;
-
-        // Read current high score
-        rewind(f);
-        bool has_score = (1 == fscanf(f, "%ld", &best_score));
-
-        // Update the new high score
-        if (!has_score || new_score > best_score) {
-            best_score = new_score;
-
-            rewind(f);
-            ftruncate(fileno(f), 0);
-            fprintf(f, "%ld\n", new_score);
-            fflush(f);
-        }
-    }
+    best_score = score;
 }
 
 //
@@ -840,7 +755,6 @@ int main(int argc, char **argv)
     atexit(SDL_Quit);
 
     pcg32_init();
-    highscore_init();
     init_input();
     init_game();
 
