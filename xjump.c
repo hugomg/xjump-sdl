@@ -337,13 +337,6 @@ static const int rightLimit = (FIELD_W-1)*S - R; // x coordinate that collides w
 static const int topLimit = 5*S;        // y coordinate that triggers a forced scroll
 static const int botLimit = FIELD_H*S;  // y coordinate that triggers a game over
 
-typedef enum {
-    STATE_RUNNING,
-    STATE_PAUSED,
-    STATE_GAMEOVER,
-    STATE_HIGHSCORES,
-} GameState;
-
 typedef struct {
     int left;
     int right;
@@ -352,11 +345,6 @@ typedef struct {
 static struct {
 
     int64_t score;
-
-    // Gameover / Pause / Highscores
-    GameState state;
-    GameState lastDrawn; // CPU optimization: don't redraw static screens.
-    int gameOverCount; // How many frames since we hit gameover
 
     // Physics
     int x, y;   // Top-left of the hero sprite, relative to top-left of screen.
@@ -416,10 +404,6 @@ static void init_game()
 {
     G.score = 0;
 
-    G.state = STATE_RUNNING;
-    G.lastDrawn = STATE_RUNNING; // (a white lie, but works)
-    G.gameOverCount = 0;
-
     G.x    = (FIELD_W/2)*S - R/2;
     G.y    = (FIELD_H-4)*S - R;
     G.vx   = 0;
@@ -474,7 +458,7 @@ static int collideWithFloor(int hy) {
     return (hy / S) * S;
 }
 
-static void updateRunningGame()
+static bool updateGame()
 {
     G.x += G.vx / 2;
     G.y += G.vy;
@@ -575,29 +559,10 @@ static void updateRunningGame()
     }
 
     if (G.y + G.forcedScroll >= botLimit) {
-        G.state = STATE_GAMEOVER;
-        highscore_update(G.score);
+        return true;
     }
-}
 
-static void updateGame()
-{
-    switch (G.state) {
-        case STATE_GAMEOVER:
-            if (++G.gameOverCount >= 80) {
-                G.state = STATE_HIGHSCORES;
-            }
-            break;
-
-        case STATE_PAUSED:
-        case STATE_HIGHSCORES:
-            // Do nothing
-            break;
-
-        case STATE_RUNNING:
-            updateRunningGame();
-            break;
-    }
+    return false;
 }
 
 //
@@ -756,6 +721,51 @@ SDL_Surface *loadThemeFile(const char *filename)
         return NULL;
     }
     return surface;
+}
+
+//
+// App State
+//
+
+typedef enum {
+    STATE_RUNNING,
+    STATE_PAUSED,
+    STATE_GAMEOVER,
+    STATE_HIGHSCORES,
+} GameState;
+
+GameState currState;  // Current screen
+GameState lastDrawn;  // CPU optimization: don't redraw static screens.
+uint32_t currTime;    // Current time
+uint32_t frameTime;   // (if RUNNING)  Moment when we ran the last simulation frame.
+uint32_t pauseTime;   // (if PAUSED)   Remaining time difference when we paused (avoids jerky scrolling when unpausing)
+uint32_t deathTime;   // (if GAMEOVER) Moment when when we entered the game over screen
+
+static void state_set(GameState state)
+{
+    switch (state) {
+        case STATE_RUNNING:
+            if (currState == STATE_PAUSED) {
+                frameTime = currTime - pauseTime;
+            } else {
+                frameTime = currTime;
+            }
+            break;
+
+        case STATE_PAUSED:
+            assert(currState == STATE_RUNNING);
+            pauseTime = (currTime - frameTime);
+            break;
+
+        case STATE_GAMEOVER:
+            deathTime = currTime;
+            highscore_update(G.score);
+            break;
+
+        case STATE_HIGHSCORES:
+            break;
+    }
+    currState = state;
 }
 
 int main(int argc, char **argv)
@@ -930,11 +940,10 @@ int main(int argc, char **argv)
     // Tell the renderer to stretch the drawing if the window is resized
     SDL_RenderSetLogicalSize(renderer, windowW, windowH);
 
-    // FPS management (all times in milliseconds)
-    uint32_t frameBudget = 0;           // Amount of time since the last simulation update
-    uint32_t lastTime = SDL_GetTicks(); // Last time that we checked the clock
-
+    state_set(STATE_RUNNING);
     while (1) {
+
+        currTime = SDL_GetTicks();
 
         //
         // Respond to events
@@ -958,25 +967,26 @@ int main(int argc, char **argv)
                     if (key.sym == SDLK_q && (key.mod & KMOD_SHIFT)) {
                         goto quit;
                     }
-                    switch (G.state) {
+                    switch (currState) {
                         case STATE_RUNNING:
                             if (key.sym == SDLK_p
                              || key.sym == SDLK_PAUSE) {
-                                G.state = STATE_PAUSED;
+                                state_set(STATE_PAUSED);
                             }
                             break;
 
                         case STATE_PAUSED:
-                            G.state = STATE_RUNNING;
+                            state_set(STATE_RUNNING);
                             break;
 
                         case STATE_GAMEOVER:
-                            G.state = STATE_HIGHSCORES;
+                            state_set(STATE_HIGHSCORES);
                             break;
 
                         case STATE_HIGHSCORES:
                             init_input();
-                            init_game(); // G.state = STATE_RUNNING;
+                            init_game();
+                            state_set(STATE_RUNNING);
                             break;
                     }
                     break;
@@ -985,8 +995,8 @@ int main(int argc, char **argv)
                 case SDL_WINDOWEVENT:
                     switch (e.window.event) {
                         case SDL_WINDOWEVENT_FOCUS_LOST:
-                            if (G.state == STATE_RUNNING) {
-                                G.state = STATE_PAUSED;
+                            if (currState == STATE_RUNNING) {
+                                state_set(STATE_PAUSED);
                             }
                             break;
                     }
@@ -997,23 +1007,37 @@ int main(int argc, char **argv)
         }
 
         //
-        // Update Game State
+        // Run the current state
         //
 
-        uint32_t now = SDL_GetTicks();
-        frameBudget += now - lastTime;
-        lastTime = now;
-        while (frameBudget >= GAME_SPEED) {
-            frameBudget -= GAME_SPEED;
-            updateGame();
-            // TODO fix scroll skip during pause
+        switch (currState) {
+            case STATE_RUNNING:
+                while (frameTime + GAME_SPEED <= currTime) {
+                    frameTime += GAME_SPEED;
+                    if (updateGame()) {
+                        state_set(STATE_GAMEOVER);
+                        break;
+                    }
+                }
+                break;
+
+            case STATE_GAMEOVER:
+                if (deathTime + 2000 <= currTime) {
+                    state_set(STATE_HIGHSCORES);
+                }
+                break;
+
+            case STATE_PAUSED:
+            case STATE_HIGHSCORES:
+                // Nothing
+                break;
         }
 
         //
         // Draw
         //
 
-        bool needsRepaint = (G.state == STATE_RUNNING || G.lastDrawn != G.state);
+        bool needsRepaint = (currState == STATE_RUNNING || currState != lastDrawn);
         if (needsRepaint) {
 
             SDL_SetRenderDrawColor(renderer, backgroundColor.r,  backgroundColor.g, backgroundColor.b, backgroundColor.a);
@@ -1024,7 +1048,7 @@ int main(int argc, char **argv)
             snprintf(scoreDigits, sizeof(scoreDigits), "%010ld", G.score);
             text_draw_line(renderer, uiFont, &uiFZ, scoreDigits, &scoreDigitsDst);
 
-            if (G.state == STATE_HIGHSCORES)  {
+            if (currState == STATE_HIGHSCORES)  {
                 char line[32];
                 snprintf(line, sizeof(line), "%s %6ld", highscoreMsg, best_score);
 
@@ -1047,10 +1071,11 @@ int main(int argc, char **argv)
                 SDL_RenderSetClipRect(renderer, &gameDst);
 
                 // Predict current hero position (without scroll)
-                int hx = G.x + (G.vx/2)*((int) frameBudget)/GAME_SPEED;
+                int dt = currTime - frameTime;
+                int hx = G.x + (G.vx/2)*dt/GAME_SPEED;
                 hx = max(hx, leftLimit);
                 hx = min(hx, rightLimit);
-                int hy = G.y + (G.vy)*((int) frameBudget)/GAME_SPEED;
+                int hy = G.y + (G.vy)*dt/GAME_SPEED;
                 if (isStanding(hx, hy)) { hy = collideWithFloor(hy); }
 
                 // Predict current hero position (with scroll)
@@ -1092,11 +1117,11 @@ int main(int argc, char **argv)
                 SDL_RenderCopy(renderer, sprites, &heroSprite[sprite_index], &heroDst);
 
                 // Text box
-                if (G.state == STATE_GAMEOVER) {
+                if (currState == STATE_GAMEOVER) {
                     text_draw_box(renderer, &gameOverDst);
                     text_draw_line(renderer, uiFont, &uiFZ, gameOverMsg, &gameOverDst);
                 }
-                if (G.state == STATE_PAUSED) {
+                if (currState == STATE_PAUSED) {
                     text_draw_box(renderer, &pauseDst);
                     text_draw_line(renderer, uiFont, &uiFZ, pauseMsg, &pauseDst);
                 }
@@ -1105,7 +1130,7 @@ int main(int argc, char **argv)
             }
 
             SDL_RenderPresent(renderer);
-            G.lastDrawn = G.state;
+            lastDrawn = currState;
 
         } else {
 
