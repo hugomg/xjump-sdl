@@ -283,36 +283,40 @@ static void init_input()
 static void input_keydown(const SDL_Keysym key)
 {
     Input input = translateHotkey(key);
-    K.isPressing[input] = true;
-    switch (input) {
-        case INPUT_LEFT:
-            K.horizDirection = LR_LEFT;
-            break;
+    if (input != INPUT_OTHER) {
+        K.isPressing[input] = true;
+        switch (input) {
+            case INPUT_LEFT:
+                K.horizDirection = LR_LEFT;
+                break;
 
-        case INPUT_RIGHT:
-            K.horizDirection = LR_RIGHT;
-            break;
+            case INPUT_RIGHT:
+                K.horizDirection = LR_RIGHT;
+                break;
 
-        default:
-            break;
+            default:
+                break;
+        }
     }
 }
 
 static void input_keyup(const SDL_Keysym key)
 {
     Input input = translateHotkey(key);
-    K.isPressing[input] = false;
-    switch (input) {
-        case INPUT_LEFT:
-            K.horizDirection = (K.isPressing[INPUT_RIGHT] ? LR_RIGHT : LR_NEUTRAL);
-            break;
+    if (input != INPUT_OTHER) {
+        K.isPressing[input] = false;
+        switch (input) {
+            case INPUT_LEFT:
+                K.horizDirection = (K.isPressing[INPUT_RIGHT] ? LR_RIGHT : LR_NEUTRAL);
+                break;
 
-        case INPUT_RIGHT:
-            K.horizDirection  = (K.isPressing[INPUT_LEFT] ? LR_LEFT : LR_NEUTRAL);
-            break;
+            case INPUT_RIGHT:
+                K.horizDirection  = (K.isPressing[INPUT_LEFT] ? LR_LEFT : LR_NEUTRAL);
+                break;
 
-        default:
-            break;
+            default:
+                break;
+        }
     }
 }
 //
