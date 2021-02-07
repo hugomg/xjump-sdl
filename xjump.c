@@ -266,20 +266,18 @@ done:
 
 static void highscore_read()
 {
-    int64_t bestScoreEver  = 0;
-    int64_t bestScoreToday = 0;
-    int64_t bestScoreExpiration = 0;
-
     rewind(highscoreFile);
-    if (1 != fscanf(highscoreFile, "best %ld", &bestScoreEver)) { return; }
-    if (2 != fscanf(highscoreFile, "today %ld %ld", &bestScoreToday, &bestScoreExpiration)) { return; }
+    if (1 != fscanf(highscoreFile, "best %ld\n", &bestScoreEver)) { return; }
+    if (2 != fscanf(highscoreFile, "today %ld %ld\n", &bestScoreToday, &bestScoreExpiration)) { return; }
 }
 
 static void highscore_write()
 {
     rewind(highscoreFile);
+    ftruncate(fileno(highscoreFile), 0);
     fprintf(highscoreFile, "best %ld\n", bestScoreEver);
     fprintf(highscoreFile, "today %ld %ld\n", bestScoreToday, bestScoreExpiration);
+    fflush(highscoreFile);
 }
 
 static time_t end_of_day(time_t now)
@@ -794,6 +792,8 @@ static const char *scoreLabelMsg = "Floor";
 static const char *copyrightMsg  = "(C) 1997 ROYALPANDA";
 static const char *gameOverMsg   = "Game Over";
 static const char *pauseMsg      = "Pause";
+static const char *highscoreMsg1 = "High Score";
+static const char *highscoreMsg2 = "Today     "; // Please make these two strings have the same length
 
 static const int NscoreDigits = 10;
 
@@ -1164,10 +1164,14 @@ int main(int argc, char **argv)
                 SDL_RenderFillRect(renderer, &innerRect);
 
                 // Draw the high scores
+                // To avoid showing repeated high scores in the first day the
+                // person is playing, only show the best time today if it is
+                // different. This also gives a nice visual cue if you get an
+                // all time highscore :)
                 char lines[2][32];
 
-                snprintf(lines[0], sizeof(lines[0]), "%s %6ld", "High Score", bestScoreEver);
-                snprintf(lines[1], sizeof(lines[1]), "%s %6ld", "Today     ", bestScoreToday);
+                snprintf(lines[0], sizeof(lines[0]), "%s %6ld", highscoreMsg1, bestScoreEver);
+                snprintf(lines[1], sizeof(lines[1]), "%s %6ld", highscoreMsg2, bestScoreToday);
 
                 int N = (bestScoreToday != bestScoreEver ? 2 : 1);
 
