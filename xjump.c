@@ -29,10 +29,10 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <sys/file.h>
 #include <sys/random.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <sys/wait.h>
 
 #include "config.h"
 #define XJUMP_FONTDIR   XJUMP_DATADIR "/xjump"
@@ -57,6 +57,11 @@ static int mod(int n, int m)
     assert(m > 0);
     int r = n % m;
     return (r >= 0 ? r : r + m);
+}
+
+static bool isNullOrEmpty(const char *s)
+{
+    return (s == NULL) || (*s == '\0');
 }
 
 static char *concat(const char **strs)
@@ -209,17 +214,110 @@ static uint32_t rnd(uint32_t a, uint32_t b)
 // Highscores
 // ----------
 
-// TODO: global highscores
-// https://fedoraproject.org/wiki/SIGs/Games/Packaging
-//
-// TODO: use flock
-// (See the original xjump code)
+int64_t bestScoreEver  = 0;
+int64_t bestScoreToday = 0;
+time_t bestScoreExpiration = 0;
+FILE *highscoreFile = NULL;
 
-int64_t best_score = 0;
-
-static void highscore_update(int64_t score)
+static void highscore_init()
 {
-    best_score = score;
+    char *highscorePath = NULL;
+
+    // Locate the local highscore file, following the XDG spec
+    // https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
+    const char *fileName = "xjump-highscores";
+    const char *HOME          = getenv("HOME");
+    const char *XDG_DATA_HOME = getenv("XDG_DATA_HOME");
+    if (!isNullOrEmpty(XDG_DATA_HOME)) {
+        const char *ss[] = { XDG_DATA_HOME, "/", fileName, NULL };
+        highscorePath = concat(ss);
+    } else if (!isNullOrEmpty(HOME)) {
+        const char *ss[] = { HOME, "/.local/share/", fileName, NULL };
+        highscorePath = concat(ss);
+    } else {
+        fprintf(stderr, "Could not find highscore directory. $HOME is not set.\n");
+        goto done;
+    }
+
+    // Open the local highscore file or create it if it does not already exist.
+    // We need to use low level open() to this precise combination of RW plus
+    // file creation. If we get an error, it's better to get it now than after
+    // a long game.
+    int flags = O_RDWR | O_CREAT;
+    int fd = open(highscorePath, flags, 0666);
+    if (fd < 0) {
+        perror("Could not open highscore file");
+        goto done;
+    }
+
+    // Create a more convenient FILE* handle for the highscores.
+    highscoreFile = fdopen(fd, "r+");
+    if (!highscoreFile) {
+        perror("Could not create highscore file handle");
+        goto done;
+    }
+
+done:
+    if (!highscoreFile) {
+        fprintf(stderr, "Highscores will not be recorded\n");
+    }
+    free(highscorePath);
+}
+
+static void highscore_read()
+{
+    int64_t bestScoreEver  = 0;
+    int64_t bestScoreToday = 0;
+    int64_t bestScoreExpiration = 0;
+
+    rewind(highscoreFile);
+    if (1 != fscanf(highscoreFile, "best %ld", &bestScoreEver)) { return; }
+    if (2 != fscanf(highscoreFile, "today %ld %ld", &bestScoreToday, &bestScoreExpiration)) { return; }
+}
+
+static void highscore_write()
+{
+    rewind(highscoreFile);
+    fprintf(highscoreFile, "best %ld\n", bestScoreEver);
+    fprintf(highscoreFile, "today %ld %ld\n", bestScoreToday, bestScoreExpiration);
+}
+
+static time_t end_of_day(time_t now)
+{
+    struct tm *date = localtime(&now);
+    date->tm_mday += 1;
+    date->tm_hour = 0;
+    date->tm_min = 0;
+    date->tm_sec = 0;
+    return mktime(date);
+}
+
+static void highscore_update(int64_t newScore)
+{
+    time_t now = time(NULL);
+    if (highscoreFile) {
+
+        if (0 != flock(fileno(highscoreFile), LOCK_EX)) {
+            panic("Could not acquire file lock", strerror(errno));
+        }
+
+        highscore_read();
+
+        if (newScore > bestScoreEver) {
+            bestScoreEver = newScore;
+        }
+
+        if (newScore > bestScoreToday || bestScoreExpiration < now) {
+            bestScoreToday = newScore;
+            bestScoreExpiration = end_of_day(now);
+        }
+
+        highscore_write();
+
+        if (0 != flock(fileno(highscoreFile), LOCK_UN)) {
+            panic("Could not release file lock", strerror(errno));
+        }
+    }
 }
 
 //
@@ -778,7 +876,6 @@ int main(int argc, char **argv)
     parseCommandLine(argc, argv);
 
     // Initialize subsystems
-
     if (0 != SDL_Init(SDL_INIT_VIDEO))
         panic("Could not initialize SDL", SDL_GetError());
     atexit(SDL_Quit);
@@ -788,6 +885,7 @@ int main(int argc, char **argv)
     if (nread == -1) panic("Could not initialize RNG", strerror(errno));
 
     pcg32_init(seed);
+    highscore_init();
     init_input();
     init_game();
 
@@ -1053,14 +1151,8 @@ int main(int argc, char **argv)
             text_draw_line(renderer, uiFont, &uiFZ, scoreDigits, &scoreDigitsDst);
 
             if (currState == STATE_HIGHSCORES)  {
-                char line[32];
-                snprintf(line, sizeof(line), "%s %6ld", highscoreMsg, best_score);
 
-                int highscoreW = hsFZ.w * strlen(line);
-                int highscoreH = hsFZ.h;
-                int highscoreX = gameX + (gameW - highscoreW)/2;
-                int highscoreY = gameY + (gameH - highscoreH)/2;
-
+                // Clear background
                 SDL_SetRenderDrawColor(renderer, scoreBorderColor.r,  scoreBorderColor.g, scoreBorderColor.b, scoreBorderColor.a);
                 SDL_RenderFillRect(renderer, &gameDst);
 
@@ -1068,8 +1160,23 @@ int main(int argc, char **argv)
                 SDL_SetRenderDrawColor(renderer, backgroundColor.r,  backgroundColor.g, backgroundColor.b, backgroundColor.a);
                 SDL_RenderFillRect(renderer, &innerRect);
 
-                const SDL_Rect dst = { highscoreX, highscoreY, highscoreW, highscoreH };
-                text_draw_line(renderer, hsFont, &hsFZ, line, &dst);
+                // Draw the high scores
+                char lines[2][32];
+
+                snprintf(lines[0], sizeof(lines[0]), "%s %6ld", "High Score", bestScoreEver);
+                snprintf(lines[1], sizeof(lines[1]), "%s %6ld", "Today     ", bestScoreToday);
+
+                int N = (bestScoreToday != bestScoreEver ? 2 : 1);
+
+                int highscoreW = hsFZ.w * 17;
+                int highscoreH = hsFZ.h * N;
+                int highscoreX = gameX + (gameW - highscoreW)/2;
+                int highscoreY = gameY + (gameH - highscoreH)/2;
+
+                for (int i = 0; i < N; i ++) {
+                    const SDL_Rect dst = { highscoreX, highscoreY + i*hsFZ.h, highscoreW, hsFZ.h };
+                    text_draw_line(renderer, hsFont, &hsFZ, lines[i], &dst);
+                }
 
             } else {
                 SDL_RenderSetClipRect(renderer, &gameDst);
