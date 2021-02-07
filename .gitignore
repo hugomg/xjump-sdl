@@ -2,3 +2,4 @@ xjump
 *.o
 config.h
 config.mk
+doc/xjump.6.gz

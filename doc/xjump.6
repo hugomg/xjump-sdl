@@ -1,0 +1,59 @@
+.\" Only use a single space betweeen sentences that are on different lines:
+.ss 12 0
+.nh
+.\" NAME should be all caps, SECTION should be 1-8, maybe w/ subsection
+.\" other parms are allowed: see man(7), man(1)
+.TH XJUMP 6
+.SH NAME
+xjump - a jumping game for modern graphical systems
+.SH SYNOPSIS
+.B xjump
+[--soft-scroll]
+[--hard-scroll]
+.br
+      [--theme \fINAME\fR] [--graphic \fIFILE\fR]
+.SH "DESCRIPTION"
+.B Xjump
+is a jumping game where you are in a Falling Tower.
+The floor you are standing on is sinking with the rest of the building;
+you will die once the floor gives way (disappears under the bottom of the display).
+To survive, you have to jump onto the upper floors of the tower.
+Because the entire tower is sinking, the upper floors will soon collapse too, so you have to keep on jumping!
+.SH OPTIONS
+.TP
+.BI --soft-scroll
+Scroll the screen continuously. This is the default.
+.TP
+.BI --hard-scroll
+Scroll the screen in discrete increments. This is how Xjump behaved before version 3.0.
+.TP
+.BI --theme=  NAME
+Use a pre-installed sprite theme.
+The original Xjump theme is \fB--theme classic\fR.
+.TP
+.BI --graphic=  FILE
+Use a custom sprite file.
+The file should be a 144x64 image in BMP format.
+If you have an old theme in XPM format, please convert it to BMP format first.
+
+.SH "CONTROLS"
+The game can be controlled either with the arrow keys or with the WASD keys.
+Use Up, Down or Space to jump. P pauses the game. Shift\-Q exits the game.
+.PP
+Note that the faster you are moving the higher you will jump.
+Use this to reach floors that are further up.
+But aim carefully so that you don't miss!
+.PP
+.SH AUTHORS
+\fBxjump\fR was written by Tatsuya Kudoh and Masato Taruishi.
+The SDL port was written by Hugo Gualandi.
+
+.SH COPYRIGHT
+Copyright (C) 1997\-1999 Tatsuya Kudoh, Masato Taruishi
+.br
+Copyright (C) 2015\-2021 Hugo Gualandi
+.PP
+License GPLv3+.
+This is free software;
+you can redistribute it and/or modify it under the terms of the GNU General Public License, version 3 or later.
+There is NO WARRANTY, to the extent permitted by law.
