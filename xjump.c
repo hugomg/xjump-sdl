@@ -646,17 +646,21 @@ static bool updateGame()
         scroll();
     }
 
-    if (isSoftScroll) {
-        if (G.y + G.forcedScroll < topLimit) {
-            G.forcedScroll = topLimit - G.y;
-            while (G.forcedScroll >= S) {
-                G.scrollCount = 0;
+    // Force scroll if too close to the top. But only if we are in the air, to
+    // avoid big jumps in the scroll due to collideWithFloor.
+    if (G.vy < 0) {
+        if (isSoftScroll) {
+            if (G.y + G.forcedScroll < topLimit) {
+                G.forcedScroll = topLimit - G.y;
+                while (G.forcedScroll >= S) {
+                    G.scrollCount = 0;
+                    scroll();
+                }
+            }
+        } else {
+            while (G.y < topLimit) {
                 scroll();
             }
-        }
-    } else {
-        while (G.y < topLimit) {
-            scroll();
         }
     }
 
@@ -790,7 +794,6 @@ static const char *scoreLabelMsg = "Floor";
 static const char *copyrightMsg  = "(C) 1997 ROYALPANDA";
 static const char *gameOverMsg   = "Game Over";
 static const char *pauseMsg      = "Pause";
-static const char *highscoreMsg  = "High Score";
 
 static const int NscoreDigits = 10;
 
@@ -1191,12 +1194,13 @@ int main(int argc, char **argv)
 
                 // Predict current hero position (with scroll)
                 int sx = hx;
-                int sy;
+                int sy = hy;
                 if (isSoftScroll) {
                     sy = hy + G.forcedScroll + S*G.scrollCount/SCROLL_THRESHOLD;
-                    sy = max(sy, topLimit);
+                    if (G.vy < 0) sy = max(sy, topLimit);
                 } else {
-                    // Don't interpolate vertically, to reduce flickering during forced scrolls
+                    // Don't interpolate vertically at all if we are in --hard-scroll.
+                    // This reduced clickering during during forced scrolls
                     hy = G.y;
                     sy = G.y;
                 }
