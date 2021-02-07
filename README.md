@@ -29,9 +29,7 @@ On Fedora the package you need is `SDL2-devel`.
 ## Breaking changes
 
 This version of Xjump does not have a global highscore file.
-Although Xjump highscores are dear to my heart, that feature was hard to maintain.
-Different Linux distros have different rules for how to set up the "games" user
-and for where to store the highscore files.
+Although Xjump highscores are dear to my heart, that feature added a lot of complexity to the system.
 
 ## FAQ
 
@@ -40,3 +38,7 @@ and for where to store the highscore files.
 This version of xjump tries to keep the interface closer to the original xjump.
 For example, it launches straight into the game instead of into a menu.
 The smooth scrolling feature is inspired by GNUJump though :)
+
+2. How do I make things look like they did in the classic xjump?
+
+Use the following command-line flags: `xjump --hard-scroll --theme classic `.
