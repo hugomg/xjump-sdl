@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=XJump
+Comment=A jumping game for modern graphical systems
+Exec=xjump
+Icon=xjump
+Terminal=false
+Categories=Game;ArcadeGame;
