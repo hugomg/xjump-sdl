@@ -345,21 +345,20 @@ static struct {
 
 static Input translateHotkey(SDL_Keysym key)
 {
-    // TODO should we use scan codes?
-    switch (key.sym) {
-        case SDLK_UP:
-        case SDLK_DOWN:
-        case SDLK_w:
-        case SDLK_s:
-        case SDLK_SPACE:
+    switch (key.scancode) {
+        case SDL_SCANCODE_UP:
+        case SDL_SCANCODE_DOWN:
+        case SDL_SCANCODE_W:
+        case SDL_SCANCODE_S:
+        case SDL_SCANCODE_SPACE:
             return INPUT_JUMP;
 
-        case SDLK_LEFT:
-        case SDLK_a:
+        case SDL_SCANCODE_LEFT:
+        case SDL_SCANCODE_A:
             return INPUT_LEFT;
 
-        case SDLK_RIGHT:
-        case SDLK_d:
+        case SDL_SCANCODE_RIGHT:
+        case SDL_SCANCODE_D:
             return INPUT_RIGHT;
 
         default:
