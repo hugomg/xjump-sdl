@@ -10,10 +10,11 @@ obsolete and harder to compile on modern systems.
 
 ## New features and improvements
 
+- New default theme
 - Increased the FPS from 40 to 60
 - Smooth scrolling animations
 - Game window is now resizable
-- More responsive controls when left and right keys are pressed at the same time
+- More responsive controls (when pressing left and right simultaneously)
 
 ## Installation instructions
 
@@ -41,8 +42,8 @@ Although Xjump highscores are dear to my heart, that feature added a lot of comp
 
     This version of xjump tries to keep the interface closer to the original xjump.
     For example, it launches straight into the game instead of into a menu.
-    The smooth scrolling feature is inspired by GNUJump though :)
+    The smooth scrolling feature is inspired by GNUjump though :)
 
 2. How do I make things look like they did in the classic xjump?
 
-    Use the following command-line flags: `xjump --hard-scroll --theme classic `.
+    Use the following command-line flags: `xjump --hard-scroll --theme classic `
