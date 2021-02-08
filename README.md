@@ -4,6 +4,10 @@ This is a reimplementation of the classic Xjump game, using SDL instead of Xlib.
 In a post-Wayland world, the old implementation was growing increasingly
 obsolete and harder to compile on modern systems.
 
+<div align="center">
+    <img src="misc/screenshot.jpg" />
+</div>
+
 ## New features and improvements
 
 - Increased the FPS from 40 to 60
@@ -35,10 +39,10 @@ Although Xjump highscores are dear to my heart, that feature added a lot of comp
 
 1. Isn't this the same thing as [GNUjump](http://www.gnu.org/software/gnujump/) aka SDLjump?
 
-This version of xjump tries to keep the interface closer to the original xjump.
-For example, it launches straight into the game instead of into a menu.
-The smooth scrolling feature is inspired by GNUJump though :)
+    This version of xjump tries to keep the interface closer to the original xjump.
+    For example, it launches straight into the game instead of into a menu.
+    The smooth scrolling feature is inspired by GNUJump though :)
 
 2. How do I make things look like they did in the classic xjump?
 
-Use the following command-line flags: `xjump --hard-scroll --theme classic `.
+    Use the following command-line flags: `xjump --hard-scroll --theme classic `.
