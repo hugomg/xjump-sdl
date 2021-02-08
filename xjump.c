@@ -751,18 +751,15 @@ static void text_set_color(SDL_Texture *font, SDL_Color color)
 // -------------------------
 
 #define boxBorder 4
-#define boxPaddingTop    7
-#define boxPaddingBottom 5
-#define boxPaddingLeft   4
-#define boxPaddingRight  4
+#define boxPadding 4
 
 static void text_draw_box(SDL_Renderer *renderer, const SDL_Rect *content)
 {
     const SDL_Rect padding = {
-        content->x - boxPaddingLeft,
-        content->y - boxPaddingTop,
-        content->w + boxPaddingLeft + boxPaddingRight,
-        content->h + boxPaddingTop + boxPaddingBottom,
+        content->x - boxPadding,
+        content->y - boxPadding,
+        content->w + 2*boxPadding,
+        content->h + 2*boxPadding,
     };
     const SDL_Rect border = {
        padding.x - boxBorder,
@@ -786,7 +783,7 @@ static void text_draw_box(SDL_Renderer *renderer, const SDL_Rect *content)
 
 static const int windowMarginTop   = 24;
 static const int windowMarginLeft  = 24;
-static const int windowMarginInner = 32;
+static const int windowMarginInner = 24;
 
 static const int windowMarginBottom = windowMarginTop;
 static const int windowMarginRight  = windowMarginLeft;
@@ -898,7 +895,7 @@ int main(int argc, char **argv)
 
     // Widths and Heights
 
-    static const FontSize uiFZ = { 15, 25, 20, 25 };
+    static const FontSize uiFZ = { 15, 28, 20, 28 };
     static const FontSize hsFZ = { 10, 20, 10, 20 };
 
     const int titleW      = uiFZ.w * strlen(titleMsg);
@@ -907,7 +904,7 @@ int main(int argc, char **argv)
     const int gameOverW   = uiFZ.w * strlen(gameOverMsg);
     const int pauseW      = uiFZ.w * strlen(pauseMsg);
 
-    const int textBoxH = uiFZ.h + boxBorder + boxPaddingLeft + boxPaddingRight  + boxBorder;
+    const int textBoxH = uiFZ.h + boxBorder + 2*boxPadding + boxBorder;
 
     const int gameW = S * FIELD_W;
     const int gameH = S * FIELD_H;
@@ -928,8 +925,8 @@ int main(int argc, char **argv)
     const int gameX      = (windowW - gameW)/2;
     const int copyrightX = (windowW - copyrightW)/2;
 
-    const int titleY     = windowMarginTop + boxBorder + boxPaddingTop;
-    const int scoreY     = titleY + uiFZ.h + boxPaddingBottom + boxBorder + windowMarginInner;
+    const int titleY     = windowMarginTop + boxBorder + boxPadding;
+    const int scoreY     = titleY + uiFZ.h + boxPadding + boxBorder + windowMarginInner;
     const int gameY      = scoreY + uiFZ.h + windowMarginInner;
     const int copyrightY = gameY + gameH + windowMarginInner;
 
