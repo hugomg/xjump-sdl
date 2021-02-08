@@ -1,4 +1,4 @@
-The sprites are in the jumpnbmp.bmp icons are sourced from the Jump 'n Bump
+The sprites are in the jumpnbmp.bmp theme are sourced from the Jump 'n Bump
 game. The original graphics are by Andreas Brynervall and Martin Magnusson.
 The art for Jump 'n Bump has been released under the terms of the GPL license,
 version 2 or later.
