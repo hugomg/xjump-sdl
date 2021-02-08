@@ -846,6 +846,7 @@ uint32_t currTime;    // Current time
 uint32_t frameTime;   // (if RUNNING)  Moment when we ran the last simulation frame.
 uint32_t pauseTime;   // (if PAUSED)   Remaining time difference when we paused (avoids jerky scrolling when unpausing)
 uint32_t deathTime;   // (if GAMEOVER) Moment when when we entered the game over screen
+int64_t lastScroll;   // Ensure that scrolling only goes in one direction.
 
 static void state_set(GameState state)
 {
@@ -856,6 +857,7 @@ static void state_set(GameState state)
             } else {
                 frameTime = currTime;
             }
+            lastScroll = 0;
             break;
 
         case STATE_PAUSED:
@@ -1047,6 +1049,7 @@ int main(int argc, char **argv)
     SDL_RenderSetLogicalSize(renderer, windowW, windowH);
 
     state_set(STATE_RUNNING);
+
     while (1) {
 
         currTime = SDL_GetTicks();
@@ -1208,6 +1211,16 @@ int main(int argc, char **argv)
                     // This reduced clickering during during forced scrolls
                     hy = G.y;
                     sy = G.y;
+                }
+
+                // I don't know why sometimes our math causes the scroll to go
+                // backwards. As a workaround, remember where the scroll used
+                // to be and ensure that we only scroll forward.
+                int64_t currScroll = S*G.floorOffset + (sy - hy);
+                if (currScroll >= lastScroll) {
+                    lastScroll = currScroll;
+                } else {
+                    sy += (lastScroll - currScroll);
                 }
 
                 // Background
