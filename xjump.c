@@ -523,7 +523,7 @@ static void init_game()
     G.floorOffset  = 20;
     G.forcedScroll = 0;
     G.scrollCount  = 0;
-    G.scrollSpeed  = 200;
+    G.scrollSpeed  = 0;
 
     G.fpos = rnd(0,21);
     G.next_floor = -3;
@@ -603,7 +603,10 @@ static bool updateGame()
           G.jump = abs(G.vx)/4+7;
           G.vy = -G.jump/2-12;
           G.isStanding = true;
-          G.hasStarted = true;
+          if (!G.hasStarted) {
+              G.hasStarted = true;
+              G.scrollSpeed = 200;
+          }
         }
     }
 
