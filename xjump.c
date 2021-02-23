@@ -1069,6 +1069,8 @@ int main(int argc, char **argv)
         // Respond to events
         //
 
+        bool wasResized = false;
+
         SDL_Event e;
         while (SDL_PollEvent(&e)) {
             switch (e.type) {
@@ -1119,7 +1121,17 @@ int main(int argc, char **argv)
                                 state_set(STATE_PAUSED);
                             }
                             break;
+
+
+                        case SDL_WINDOWEVENT_RESIZED:
+                        case SDL_WINDOWEVENT_SIZE_CHANGED:
+                        case SDL_WINDOWEVENT_MINIMIZED:
+                        case SDL_WINDOWEVENT_MAXIMIZED:
+                        case SDL_WINDOWEVENT_RESTORED:
+                            wasResized = true;
+                            break;
                     }
+                    break;
 
                 default:
                     break;
@@ -1157,7 +1169,7 @@ int main(int argc, char **argv)
         // Draw
         //
 
-        bool needsRepaint = (currState == STATE_RUNNING || currState != lastDrawn);
+        bool needsRepaint = (currState == STATE_RUNNING || currState != lastDrawn || wasResized);
         if (needsRepaint) {
 
             SDL_SetRenderDrawColor(renderer, backgroundColor.r,  backgroundColor.g, backgroundColor.b, backgroundColor.a);
