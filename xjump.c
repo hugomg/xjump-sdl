@@ -423,6 +423,25 @@ static void input_keyup(const SDL_Keysym key)
 // Game Logic
 // ----------
 
+// HERE BE DRAGONS (SHOULD THIS BE REFACTORED?)
+// The game logic that I am using is taken almost directly from the original
+// XJump source code, with soft scrolling bolted on top. This causes the soft
+// scrolling parts to be a bit unnatural. The original logic is heavily tied
+// to the idea that the hero position is it's position in pixels. However, in
+// soft scrolling mode this is no longer true because the screen can scroll
+// between frames. The end result is stuff like forcedScroll and interpScroll.
+//
+// Part of me really wants to rewrite this code so that the hero coordinates
+// are relative to the bottom of the tower. That would greatly simplify the
+// scrolling logic, because that way the scrolling becomes mostly about the
+// camera position, not the hero position. But that will wait for another day
+// because I don't want to break working code.
+//
+// We should also consider if we really want to keep supporting the legacy
+// --hard-scroll mode. It took a lot of effort to stamp out all the scrolling
+// bugs and in the end the hard scroll logic was completely different than the
+// --soft-scroll one...
+
 #define S 16  /* Size of a sprite tile, in pixels */
 #define R 32  /* Size of the player sprite, in pixels */
 
