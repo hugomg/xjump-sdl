@@ -652,20 +652,11 @@ static bool updateGame()
     }
 
     // Force scroll if too close to the top. But only if we are in the air, to
-    // avoid big jumps in the scroll due to collideWithFloor.
-    if (G.vy < 0) {
-        if (isSoftScroll) {
-            if (G.y + G.forcedScroll < topLimit) {
-                G.forcedScroll = topLimit - G.y;
-                while (G.forcedScroll >= S) {
-                    G.scrollCount = 0;
-                    scroll();
-                }
-            }
-        } else {
-            while (G.y < topLimit) {
-                scroll();
-            }
+    // avoid big jumps in the scroll due to collideWithFloor. (For softscroll
+    // mode, we do this in the rendering loop)
+    if (!isSoftScroll && !G.isStanding) {
+        while (G.y < topLimit) {
+            scroll();
         }
     }
 
@@ -849,7 +840,6 @@ uint32_t currTime;    // Current time
 uint32_t frameTime;   // (if RUNNING)  Moment when we ran the last simulation frame.
 uint32_t pauseTime;   // (if PAUSED)   Remaining time difference when we paused (avoids jerky scrolling when unpausing)
 uint32_t deathTime;   // (if GAMEOVER) Moment when when we entered the game over screen
-int64_t lastScroll;   // Ensure that scrolling only goes in one direction.
 
 static void state_set(GameState state)
 {
@@ -860,7 +850,6 @@ static void state_set(GameState state)
             } else {
                 frameTime = currTime;
             }
-            lastScroll = 0;
             break;
 
         case STATE_PAUSED:
@@ -1195,40 +1184,43 @@ int main(int argc, char **argv)
             } else {
                 SDL_RenderSetClipRect(renderer, &gameDst);
 
-                // Predict current hero position (without scroll)
-                int dt = currTime - frameTime;
-                int hx = G.x + (G.vx/2)*dt/GAME_SPEED;
-                hx = max(hx, leftLimit);
-                hx = min(hx, rightLimit);
-                int hy = G.y + (G.vy)*dt/GAME_SPEED;
-                if (isStanding(hx, hy)) { hy = collideWithFloor(hy); }
-
-                // Predict current hero position (with scroll)
-                int sx = hx;
-                int sy = hy;
-                if (isSoftScroll) {
-                    sy = hy + G.forcedScroll + S*G.scrollCount/SCROLL_THRESHOLD;
-                    if (G.vy < 0) sy = max(sy, topLimit);
-                } else {
-                    // Don't interpolate vertically at all if we are in --hard-scroll.
-                    // This reduced clickering during during forced scrolls
-                    hy = G.y;
+                int sx, sy, interpScroll;
+                if (!isSoftScroll) {
+                    // In hard scroll more we don't interpolate the hero
+                    // position at all because it causes too much flickering
+                    // during forced scrolls
+                    sx = G.x;
                     sy = G.y;
-                }
-
-                // I don't know why sometimes our math causes the scroll to go
-                // backwards. As a workaround, remember where the scroll used
-                // to be and ensure that we only scroll forward.
-                int64_t currScroll = S*G.floorOffset + (sy - hy);
-                if (currScroll >= lastScroll) {
-                    lastScroll = currScroll;
+                    interpScroll = 0;
                 } else {
-                    sy += (lastScroll - currScroll);
+                    // In soft scroll mode, we compute the hero and scroll
+                    // coordinates using linear interpolation.
+
+                    // Predict current hero position (without scroll)
+                    int dt = currTime - frameTime;
+                    int hx = G.x + (G.vx/2)*dt/GAME_SPEED;
+                    if (hx < leftLimit) { hx = leftLimit; }
+                    if (hx > rightLimit) { hx = rightLimit; }
+                    int hy = G.y + (G.vy)*dt/GAME_SPEED;
+                    int stand = isStanding(hx, hy);
+                    if (stand) { hy = collideWithFloor(hy); }
+
+                    // Predict current hero position (with scroll)
+                    int c = G.scrollCount + dt*G.scrollSpeed/GAME_SPEED;
+                    sx = hx;
+                    sy = hy + G.forcedScroll + S*c/SCROLL_THRESHOLD;
+                    if (!stand && sy < topLimit) {
+                        G.forcedScroll += (topLimit - sy);
+                        G.scrollCount = 0;
+                        sy = topLimit;
+                    }
+
+                    interpScroll = sy - hy;
                 }
 
                 // Background
                 const SDL_Rect backgroundSrc = { 0, 0, backgroundW, backgroundH };
-                const SDL_Rect backgroundDst = { gameX, gameY - S*FIELD_EXTRA + (sy - hy), backgroundW, backgroundH };
+                const SDL_Rect backgroundDst = { gameX, gameY - S*FIELD_EXTRA + interpScroll, backgroundW, backgroundH };
                 SDL_RenderCopy(renderer, gameBackground, &backgroundSrc, &backgroundDst);
 
                 // Floors
@@ -1239,7 +1231,7 @@ int main(int argc, char **argv)
                     if (xl <= xr) {
                         int w = xr - xl + 1;
                         const SDL_Rect src = { 0, backgroundH, w*S, S };
-                        const SDL_Rect dst = { gameX + xl*S, gameY + y*S + (sy - hy), w*S, S };
+                        const SDL_Rect dst = { gameX + xl*S, gameY + y*S + interpScroll, w*S, S };
                         SDL_RenderCopy(renderer, gameBackground, &src, &dst);
                     }
                 }
@@ -1260,6 +1252,14 @@ int main(int argc, char **argv)
                 if (currState == STATE_PAUSED) {
                     text_draw_box(renderer, &pauseDst);
                     text_draw_line(renderer, uiFont, &uiFZ, pauseMsg, &pauseDst);
+                }
+
+                if (isSoftScroll) {
+                    // We need to do this after drawing the floors, otherwise it
+                    // messes up the G.floorOffset
+                    while (G.forcedScroll >= S) {
+                        scroll();
+                    }
                 }
 
                 SDL_RenderSetClipRect(renderer, NULL);
