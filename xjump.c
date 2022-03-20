@@ -350,6 +350,8 @@ static Input translateHotkey(SDL_Keysym key)
         case SDL_SCANCODE_DOWN:
         case SDL_SCANCODE_W:
         case SDL_SCANCODE_S:
+        case SDL_SCANCODE_I:
+        case SDL_SCANCODE_K:
         case SDL_SCANCODE_SPACE:
         case SDL_SCANCODE_KP_8:
         case SDL_SCANCODE_KP_5:
@@ -358,11 +360,13 @@ static Input translateHotkey(SDL_Keysym key)
 
         case SDL_SCANCODE_LEFT:
         case SDL_SCANCODE_A:
+        case SDL_SCANCODE_J:
         case SDL_SCANCODE_KP_4:
             return INPUT_LEFT;
 
         case SDL_SCANCODE_RIGHT:
         case SDL_SCANCODE_D:
+        case SDL_SCANCODE_L:
         case SDL_SCANCODE_KP_6:
             return INPUT_RIGHT;
 
