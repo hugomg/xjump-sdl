@@ -274,7 +274,9 @@ static void highscore_read()
 static void highscore_write()
 {
     rewind(highscoreFile);
-    ftruncate(fileno(highscoreFile), 0);
+    if (0 != ftruncate(fileno(highscoreFile), 0)) {
+        panic("Could not reset highscore file", strerror(errno));
+    }
     fprintf(highscoreFile, "best %ld\n", bestScoreEver);
     fprintf(highscoreFile, "today %ld %ld\n", bestScoreToday, bestScoreExpiration);
     fflush(highscoreFile);
