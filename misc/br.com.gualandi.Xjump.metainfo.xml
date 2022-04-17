@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Copyright 2021 Hugo Gualandi <hugo@gualandi.com.br> -->
 <component type="desktop-application">
-<!-- Validate this with `appstream-util validate-relax` -->
   <id>br.com.gualandi.Xjump</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0+</project_license>
@@ -32,5 +31,11 @@
   <developer_name>Hugo Gualandi</developer_name>
   <update_contact>hugo@gualandi.com.br</update_contact>
   <content_rating type="oars-1.1" />
+  <releases>
+    <release version="3.0.2" date="2022-04-18">
+      <description xml:lang="en">
+      </description>
+    </release>
+  </releases>
 </component>
 
