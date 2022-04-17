@@ -32,7 +32,9 @@ install:
 	$(INSTALL_DATA) -D data/themes/ion.bmp       $(DESTDIR)$(datadir)/xjump/themes/ion.bmp
 	$(INSTALL_DATA) -D data/themes/jumpnbump.bmp $(DESTDIR)$(datadir)/xjump/themes/jumpnbump.bmp
 	$(INSTALL_DATA) -D misc/xjump.6.gz           $(DESTDIR)$(datadir)/man/man6/xjump.6.gz
-	$(INSTALL_DATA) -D misc/icon.png             $(DESTDIR)$(datadir)/icons/hicolor/32x32/apps/br.com.gualandi.Xjump.png
+	$(INSTALL_DATA) -D misc/icon32.png           $(DESTDIR)$(datadir)/icons/hicolor/32x32/apps/br.com.gualandi.Xjump.png
+	$(INSTALL_DATA) -D misc/icon64.png           $(DESTDIR)$(datadir)/icons/hicolor/64x64/apps/br.com.gualandi.Xjump.png
+	$(INSTALL_DATA) -D misc/icon128.png          $(DESTDIR)$(datadir)/icons/hicolor/128x128/apps/br.com.gualandi.Xjump.png
 	$(INSTALL_DATA) -D misc/br.com.gualandi.Xjump.desktop      $(DESTDIR)$(datadir)/applications/br.com.gualandi.Xjump.desktop
 	$(INSTALL_DATA) -D misc/br.com.gualandi.Xjump.metainfo.xml $(DESTDIR)$(datadir)/metainfo/br.com.gualandi.Xjump.metainfo.xml
 
@@ -41,6 +43,8 @@ uninstall:
 	rm -rf $(DESTDIR)$(datadir)/xjump
 	rm -rf $(DESTDIR)$(datadir)/man/man6/xjump.6.gz
 	rm -rf $(DESTDIR)$(datadir)/icons/hicolor/32x32/apps/br.com.gualandi.Xjump.png
+	rm -rf $(DESTDIR)$(datadir)/icons/hicolor/64x64/apps/br.com.gualandi.Xjump.png
+	rm -rf $(DESTDIR)$(datadir)/icons/hicolor/128x128/apps/br.com.gualandi.Xjump.png
 	rm -rf $(DESTDIR)$(datadir)/applications/br.com.gualandi.Xjump.desktop
 	rm -rf $(DESTDIR)$(datadir)/metainfo/br.com.gualandi.Xjump.metainfo.xml
 
