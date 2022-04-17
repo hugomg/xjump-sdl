@@ -4,6 +4,6 @@ Type=Application
 Name=XJump
 Comment=A jumping game for modern graphical systems
 Exec=xjump
-Icon=xjump
+Icon=br.com.gualandi.Xjump
 Terminal=false
 Categories=Game;ArcadeGame;

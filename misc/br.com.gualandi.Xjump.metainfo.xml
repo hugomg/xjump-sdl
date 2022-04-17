@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2021 Hugo Gualandi <hugo@gualandi.com.br> -->
+<!-- Validate this with `appstream-util validate-relax` -->
+<component type="desktop">
+  <id>br.com.gualandi.Xjump.desktop</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0+</project_license>
+  <name>Xjump</name>
+  <summary>A jumping game for modern graphical systems</summary>
+  <description>
+    <p>
+      Xjump is a jumping game where you are in a Falling Tower.
+      The floor you are standing on is sinking with the rest of the building;
+      you will die once the floor gives way (disappears under the bottom of the display).
+      To survive, you have to jump onto the upper floors of the tower.
+      Because the entire tower is sinking, the upper floors will soon collapse too,
+      so you have to keep on jumping!
+    </p>
+    <p>
+      This version of Xjump is a re-implementation using SDL instead of Xlib.
+      It features smoother animations (60 FPS with smooth scrolling)
+      and is more compatible with modern graphical systems.
+   </p>
+  </description>
+  <categories>
+      <category>Game</category>
+      <category>ArcadeGame</category>
+  </categories>
+  <url type="homepage">https://github.com/hugomg/xjump-sdl</url>
+  <launchable type="desktop-id">br.com.gualandi.Xjump.desktop</launchable>
+  <provides>
+      <binary>xjump</binary>
+  </provides>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://github.com/hugomg/xjump-sdl/raw/main/misc/screenshot.jpg</image>
+    </screenshot>
+  </screenshots>
+  <developer_name>Hugo Gualandi</developer_name>
+  <update_contact>hugo@gualandi.com.br</update_contact>
+  <content_rating type="oars-1.1" />
+</component>
+
