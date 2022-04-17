@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Copyright 2021 Hugo Gualandi <hugo@gualandi.com.br> -->
+<component type="desktop-application">
 <!-- Validate this with `appstream-util validate-relax` -->
-<component type="desktop">
-  <id>br.com.gualandi.Xjump.desktop</id>
+  <id>br.com.gualandi.Xjump</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0+</project_license>
   <name>Xjump</name>
@@ -22,15 +22,8 @@
       and is more compatible with modern graphical systems.
    </p>
   </description>
-  <categories>
-      <category>Game</category>
-      <category>ArcadeGame</category>
-  </categories>
-  <url type="homepage">https://github.com/hugomg/xjump-sdl</url>
   <launchable type="desktop-id">br.com.gualandi.Xjump.desktop</launchable>
-  <provides>
-      <binary>xjump</binary>
-  </provides>
+  <url type="homepage">https://github.com/hugomg/xjump-sdl</url>
   <screenshots>
     <screenshot type="default">
       <image>https://github.com/hugomg/xjump-sdl/raw/main/misc/screenshot.jpg</image>
