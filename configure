@@ -57,9 +57,13 @@ EOF
 
 version='3.0'
 
-prefix='/usr/local'
-bindir='${prefix}/bin'
-datadir='${prefix}/share'
+# shellcheck disable=SC2016
+{
+    prefix='/usr/local'
+    bindir='${prefix}/bin'
+    datadir='${prefix}/share'
+}
+
 othervars=
 
 set_sdl_cflags=no
@@ -121,6 +125,7 @@ done
 # the tilde would be expanded when we present the installation paths to the
 # user but it not when those paths are used in other places.
 
+# shellcheck disable=SC2154
 for varname in prefix bindir datadir; do
     eval "value=\$$varname"
     case "$value" in
