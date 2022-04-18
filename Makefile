@@ -71,5 +71,9 @@ config.h: config.mk
 	@echo '#define XJUMP_DATADIR "$(datadir)"' >> $@
 	@printf " done\n"
 
+config.mk:
+	@echo You must run ./configure before make
+	@exit 1
+
 misc/xjump.6.gz: misc/xjump.6
 	gzip -c $< > $@
