@@ -60,65 +60,56 @@ version='3.0'
 prefix='/usr/local'
 bindir='${prefix}/bin'
 datadir='${prefix}/share'
-
-sdl_cflags=
-sdl_libs=
 othervars=
 
 set_sdl_cflags=no
 set_sdl_libs=no
 set_othervars=no
 
-
 # Command-line parsing
 # --------------------
-# To keep things simple we require that options with parameters use the
-# --key=value notation. Please don't use --key value, without the "=".
 
 nl='
 '
 
-for arg in "$@"; do
-    key="${arg%%=*}"
-    value="${arg#*=}"
-    case "$arg" in
+while test $# -gt 0; do
+    key=${1%%=*}
+    val=${1#*=}
+    case "$1" in
         -h|--help)
             usage
             exit 0
             ;;
 
-        --prefix=*|prefix=*)
-            prefix=$value
-            ;;
+        --prefix)  prefix=$2; shift;;
+        --bindir)  bindir=$2; shift;;
+        --datadir) datadir=$2; shift;;
 
-        --bindir=*|bindir=*)
-            bindir=$value
-            ;;
-
-        --datadir=*|datadir=*)
-            datadir=$value
-            ;;
+        --prefix=*|prefix=*)   prefix=$val;;
+        --bindir=*|bindir=*)   bindir=$val;;
+        --datadir=*|datadir=*) datadir=$val;;
 
         -*)
-            echo >&2 "ERROR: Unrecognized option $arg"
+            echo >&2 "ERROR: Unrecognized option $1"
             exit 1
             ;;
 
         SDL_CFLAGS=*)
-            sdl_cflags=$value
+            SDL_CFLAGS=$val
             set_sdl_cflags=yes
             ;;
 
         SDL_LIBS=*)
-            sdl_libs=$value
-            set_sdl_cflags=yes
+            SDL_LIBS=$val
+            set_sdl_libs=yes
             ;;
 
         *=*)
-            othervars="${othervars}${key} = ${value}${nl}"
+            othervars="${othervars}${key} = ${val}${nl}"
             set_othervars=yes
             ;;
     esac
+    shift
 done
 
 # Check for absolute directories
@@ -157,7 +148,7 @@ done
 # As a concession for people who don't have pkg-config set up, assume that the
 # library is installed if the user is setting the relevant compilation flags.
 
-if [ "$set_sdl_cflags" = no ] || [ "$set_sdl_libs" = no ]; then
+if [ "$set_sdl_cflags" != yes ] || [ "$set_sdl_libs" != yes ]; then
     if ! pkg-config sdl2 --exists; then
         cat >&2 <<EOF
 ERROR: pkg-config could not find the header files for SDL2.
@@ -170,14 +161,13 @@ EOF
     fi
 fi
 
-if [ "$set_sdl_cflags" = no ]; then
-    sdl_cflags=$(pkg-config sdl2 --cflags)
+if [ "$set_sdl_cflags" != "yes" ]; then
+    SDL_CFLAGS=$(pkg-config sdl2 --cflags)
 fi
 
-if [ "$set_sdl_libs" = no ]; then
-    sdl_libs=$(pkg-config sdl2 --libs)
+if [ "$set_sdl_libs" != "yes" ]; then
+    SDL_LIBS=$(pkg-config sdl2 --libs)
 fi
-
 
 # Generate the config.mk
 # ----------------------
@@ -192,8 +182,8 @@ version = $version
 prefix  = $prefix
 bindir  = $bindir
 datadir = $datadir
-SDL_CFLAGS = $sdl_cflags
-SDL_LIBS   = $sdl_libs
+SDL_CFLAGS = $SDL_CFLAGS
+SDL_LIBS   = $SDL_LIBS
 EOF
 if [ "$othervars" ]; then
     printf "%s" "$othervars" >> config.mk
@@ -219,10 +209,10 @@ Xjump will install executables in: ${bindir}
 Xjump will install data files in : ${datadir}
 EOF
 if [ "$set_sdl_cflags" = yes ]; then
-    echo "SDL_CFLAGS = $sdl_cflags"
+    echo "SDL_CFLAGS = $SDL_CFLAGS"
 fi
 if [ "$set_sdl_libs" = yes ]; then
-    echo "SDL_LIBS = $sdl_libs"
+    echo "SDL_LIBS = $SDL_LIBS"
 fi
 if [ "$set_othervars" = yes ]; then
     printf "%s" "$othervars"
