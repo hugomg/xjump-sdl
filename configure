@@ -197,13 +197,13 @@ fi
 # Report the results
 # ------------------
 # Finally, tell the user where things are going to be installed, showing the
-# actual directories without the ${} indirections. If you think that eval is
-# weird, remember that the makefile also treats these variables as shell code
-# then it expands them.
+# actual directories without the ${} indirections. The evals here are on
+# purpose. Remember that the contents of these variables are subject to
+# parameter expansion when they finally hit the shell inside the makefile.
 
-eval prefix="${prefix}"
-eval bindir="${bindir}"
-eval datadir="${datadir}"
+eval prefix="$prefix"
+eval bindir="$bindir"
+eval datadir="$datadir"
 
 cat <<EOF
 Configuration sucessful.
