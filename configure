@@ -7,7 +7,7 @@
 # https://www.gnu.org/prep/standards/html_node/Configuration.html
 # https://www.gnu.org/software/make/manual/html_node/Makefile-Conventions.html
 
-usage() {
+show_usage() {
     cat <<EOF
 Usage: $0 [OPTION]... [VAR=VALUE]...
 Configure the installation location and compilation options for Xjump.
@@ -81,7 +81,7 @@ while test $# -gt 0; do
     val=${1#*=}
     case "$1" in
         -h|--help)
-            usage
+            show_usage
             exit 0
             ;;
 
@@ -93,7 +93,7 @@ while test $# -gt 0; do
         --bindir=*|bindir=*)   bindir=$val;;
         --datadir=*|datadir=*) datadir=$val;;
 
-        -*)
+        -*|--*)
             echo >&2 "ERROR: Unrecognized option $1"
             exit 1
             ;;
