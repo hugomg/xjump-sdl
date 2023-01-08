@@ -86,7 +86,7 @@ while test $# -gt 0; do
         --bindir=*|bindir=*)   bindir=$val;;
         --datadir=*|datadir=*) datadir=$val;;
 
-        -*|--*)
+        --*|-*)
             echo >&2 "ERROR: Unrecognized option $1"
             exit 1
             ;;
