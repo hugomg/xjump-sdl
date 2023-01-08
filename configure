@@ -144,28 +144,39 @@ done
 # Find where SDL is installed
 # ---------------------------
 
-# As a concession for people who don't have pkg-config set up, assume that the
-# library is installed if the user is setting the relevant compilation flags.
-
 if [ "$set_sdl_cflags" != yes ] || [ "$set_sdl_libs" != yes ]; then
-    if ! pkg-config sdl2 --exists; then
+
+    # 1) Is SDL2 installed at all?
+    # ----------------------------
+
+    # Prefer pkg-config over sdl2-config
+    # See https://github.com/libsdl-org/SDL/issues/6140
+    if command -v pkg-config >/dev/null && pkg-config sdl2 --exists; then
+        config="pkg-config sdl2"
+
+    elif command -v sdl2-config >/dev/null; then
+        config="sdl2-config"
+
+    else
         cat >&2 <<EOF
-ERROR: pkg-config could not find the header files for SDL2.
-If the dev package of SDL2 is not already installed, please install it first.
-If it is already installed, one way to avoid this error is to call configure
-again while specifying appropriate values for the SDL_CFLAGS and SDL_LIBS
-compilation variables.
+ERROR: We can't find the header files for SDL2. If the dev package for SDL is
+not already installed, please install it. If you are certain that it is already
+installed then you can avoid this error by manually specifying the SDL_CFLAGS
+and SDL_LIBS environment variables before calling this configure script.
 EOF
         exit 1
     fi
-fi
 
-if [ "$set_sdl_cflags" != "yes" ]; then
-    SDL_CFLAGS=$(pkg-config sdl2 --cflags)
-fi
+    # 2) Find the header files
+    # ------------------------
 
-if [ "$set_sdl_libs" != "yes" ]; then
-    SDL_LIBS=$(pkg-config sdl2 --libs)
+    if [ "$set_sdl_cflags" != "yes" ]; then
+        SDL_CFLAGS=$($config --cflags)
+    fi
+
+    if [ "$set_sdl_libs" != "yes" ]; then
+        SDL_LIBS=$($config --libs)
+    fi
 fi
 
 # Generate the config.mk
