@@ -184,7 +184,7 @@ datadir = $datadir
 SDL_CFLAGS = $SDL_CFLAGS
 SDL_LIBS   = $SDL_LIBS
 EOF
-if [ "$othervars" ]; then
+if [ "$set_othervars" = yes ]; then
     printf "%s" "$othervars" >> config.mk
 fi
 
