@@ -3,7 +3,7 @@
 # Help message
 # ------------
 # The command line flags for this congfigure script are inspired by the GNU
-# conventions. You can find more info about that in the following links:
+# conventions. They are documented in the following links:
 # https://www.gnu.org/prep/standards/html_node/Configuration.html
 # https://www.gnu.org/software/make/manual/html_node/Makefile-Conventions.html
 
@@ -44,16 +44,10 @@ EOF
 
 # Default values
 # --------------
-# Note that all the following strings are single quoted. Believe it or not,
-# everything that you pass as a parameter to make will eventually go through
-# Make macro expansion followed by Shell word expansion. Don't entertain the
-# notion that these compiler flags and installation directories are just plain
-# strings. Any parameters containing special characters like $ or spaces will
-# be ruthlessly macro expanded and word split as soon as the makefile tries to
-# use them, whether you like it or not. Anyway, the GNU conventions use this
-# feature intentionally when setting the default values for the installation
-# directories. This way, if the user overrides the root prefix when they call
-# `make` then it updates the other definitions too.
+# Note that all the following strings are single quoted. The idea is that we
+# will pass the "$vars" as-is to the makefile, which will in turn perform macro
+# and shell expansion. The GNU conventions expect this behavior so that we can
+# override the installation directories when invoking make.
 
 version='3.0'
 
@@ -62,9 +56,8 @@ version='3.0'
     prefix='/usr/local'
     bindir='${prefix}/bin'
     datadir='${prefix}/share'
+    othervars=
 }
-
-othervars=
 
 set_sdl_cflags=no
 set_sdl_libs=no
@@ -130,26 +123,27 @@ for varname in prefix bindir datadir; do
     eval "value=\$$varname"
     case "$value" in
         /*)
-            # Is am absolute path
+            # Is an absolute path
             ;;
         \$*)
-            # Is a variable reference
-            # Assume that it expand into an absolute path
+            # Assume that variable references expand to an absolute path
             ;;
         \~*)
             echo >&2 "ERROR: Please write \$HOME instead of ~ for the --$varname."
             exit 1
             ;;
         *)
-            echo >&2 "ERROR: Please specify an absolute path for --$varname. $value is not an absolute path."
+            echo >&2 "ERROR: Please specify an absolute path for --$varname."
+            echo >&2 "       $value is not an absolute path."
             exit 1
             ;;
     esac
 done
 
 
-# Check for dependencies
-# ----------------------
+# Find where SDL is installed
+# ---------------------------
+
 # As a concession for people who don't have pkg-config set up, assume that the
 # library is installed if the user is setting the relevant compilation flags.
 
@@ -207,7 +201,7 @@ eval datadir="$datadir"
 
 cat <<EOF
 Configuration sucessful.
-Run \`make\` and \`sudo make install\` to continue the installation.
+Run \`make\` and \`sudo make install\` to proceed with the installation.
 
 Xjump will be installed to       : ${prefix}
 Xjump will install executables in: ${bindir}
