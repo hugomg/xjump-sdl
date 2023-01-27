@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#define _POSIX_C_SOURCE 200112L
+
 #include <SDL.h>
 
 #include <assert.h>
@@ -897,6 +899,10 @@ int main(int argc, char **argv)
 {
     // Configuration
     parseCommandLine(argc, argv);
+
+    // This is necessary for correct app icon (must be before SDL_Init)
+    setenv("SDL_VIDEO_WAYLAND_WMCLASS", XJUMP_APPNAME, 0);
+    setenv("SDL_VIDEO_X11_WMCLASS",     XJUMP_APPNAME, 0);
 
     // Initialize subsystems
     if (0 != SDL_Init(SDL_INIT_VIDEO))

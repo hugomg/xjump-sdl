@@ -4,7 +4,7 @@
 # If you want to override these variables, the recommended way is via the
 # configure script. That way, everything gets recompiled automatically.
 
-CFLAGS = -std=c11 -pedantic -Wall -Wextra -O2 -g
+CFLAGS = -std=c17 -pedantic -Wall -Wextra -O2 -g
 
 INSTALL = install
 INSTALL_PROGRAM = $(INSTALL)
@@ -69,6 +69,7 @@ config.h: config.mk
 	@echo '#define XJUMP_PREFIX  "$(prefix)"'  >> $@
 	@echo '#define XJUMP_BINDIR  "$(bindir)"'  >> $@
 	@echo '#define XJUMP_DATADIR "$(datadir)"' >> $@
+	@echo '#define XJUMP_APPNAME "$(appname)"' >> $@
 	@printf " done\n"
 
 config.mk:

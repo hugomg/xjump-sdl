@@ -56,6 +56,7 @@ version='3.0'
     prefix='/usr/local'
     bindir='${prefix}/bin'
     datadir='${prefix}/share'
+    appname='br.com.gualandi.Xjump'
     othervars=
 }
 
@@ -192,6 +193,7 @@ version = $version
 prefix  = $prefix
 bindir  = $bindir
 datadir = $datadir
+appname = $appname
 SDL_CFLAGS = $SDL_CFLAGS
 SDL_LIBS   = $SDL_LIBS
 EOF
