@@ -809,7 +809,8 @@ static const int windowMarginInner = 24;
 static const int windowMarginBottom = windowMarginTop;
 static const int windowMarginRight  = windowMarginLeft;
 
-static const char *titleMsg      = "FALLING TOWER ver " XJUMP_VERSION;
+char titleBuf[] = "FALLING TOWER ver " XJUMP_VERSION;
+static const char *titleMsg      = titleBuf;
 static const char *scoreLabelMsg = "Floor";
 static const char *copyrightMsg  = "(C) 1997 ROYALPANDA";
 static const char *gameOverMsg   = "Game Over";
@@ -835,6 +836,20 @@ static const SDL_Rect heroSprite[8] = {
     { 2*R, 1*R, R, R}, // Fall L
     { 3*R, 1*R, R, R}, // Fall R
 };
+
+void init_title()
+{
+    // Hide the minor version number from the app title
+    int n = 0;
+    for (char *p = titleBuf; *p != 0; p++) {
+        if (*p == '.') {
+            if (++n == 2) {
+                *p = '\0';
+                break;
+            }
+        }
+    }
+}
 
 SDL_Surface *loadThemeFile(const char *filename)
 {
@@ -917,6 +932,7 @@ int main(int argc, char **argv)
     highscore_init();
     init_input();
     init_game();
+    init_title();
 
     // Widths and Heights
 
