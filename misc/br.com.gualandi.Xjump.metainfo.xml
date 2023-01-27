@@ -32,6 +32,10 @@
   <update_contact>hugo@gualandi.com.br</update_contact>
   <content_rating type="oars-1.1" />
   <releases>
+    <release version="3.0.3" date="2023-01-27">
+      <description xml:lang="en">
+      </description>
+    </release>
     <release version="3.0.2" date="2022-04-18">
       <description xml:lang="en">
       </description>

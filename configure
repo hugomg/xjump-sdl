@@ -49,7 +49,7 @@ EOF
 # and shell expansion. The GNU conventions expect this behavior so that we can
 # override the installation directories when invoking make.
 
-version='3.0'
+version='3.0.3'
 
 # shellcheck disable=SC2016
 {
