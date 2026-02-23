@@ -67,7 +67,7 @@ static bool isNullOrEmpty(const char *s)
 }
 
 static char *concat(const char **strs)
-{;
+{
     size_t len = 0;
     for (const char **s = strs; *s != NULL; s++) {
         len += strlen(*s);
@@ -435,7 +435,7 @@ static void input_keyup(const SDL_Keysym key)
 // The game logic that I am using is taken almost directly from the original
 // XJump source code, with soft scrolling bolted on top. This causes the soft
 // scrolling parts to be a bit unnatural. The original logic is heavily tied
-// to the idea that the hero position is it's position in pixels. However, in
+// to the idea that the hero position is its position in pixels. However, in
 // soft scrolling mode this is no longer true because the screen can scroll
 // between frames. The end result is stuff like forcedScroll and interpScroll.
 //
@@ -721,7 +721,7 @@ static const SDL_Color scoreBorderColor = { 255, 255, 255, 255 };
 // match the look that we want... Not to mention that the fonts are not the
 // same as the original and that locating system fonts on Linux is a pain.
 // The big downside of bitmapped fonts is that they can't represent special
-// characters. We are effectively restricted to ACII.
+// characters. We are effectively restricted to ASCII.
 //
 // On the matter of font dimensions, both of our fonts are monospaced, where
 // the text is arranged in a rectangular grid. However, one subtlety is that in
