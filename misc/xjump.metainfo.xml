@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Copyright 2026 Hugo Gualandi <hugo@gualandi.com.br> -->
 <component type="desktop-application">
-  <id>br.com.gualandi.Xjump</id>
+  <id>io.github.hugomg.xjump-sdl</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0+</project_license>
   <name>Xjump</name>
@@ -21,7 +21,7 @@
       and is more compatible with modern graphical systems.
    </p>
   </description>
-  <launchable type="desktop-id">br.com.gualandi.Xjump.desktop</launchable>
+  <launchable type="desktop-id">io.github.hugomg.xjump-sdl.desktop</launchable>
   <url type="homepage">https://github.com/hugomg/xjump-sdl</url>
   <url type="bugtracker">https://github.com/hugomg/xjump-sdl/issues</url>
   <url type="vcs-browser">https://github.com/hugomg/xjump-sdl</url>
@@ -39,6 +39,11 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="3.0.6" date="2026-04-04">
+        <description>
+            <p>Rename app ID following Flathub convention</p>
+        </description>
+    </release>
     <release version="3.0.5" date="2026-02-25">
         <description>
             <p>Enable wayland backend</p>
@@ -60,4 +65,6 @@
         </description>
     </release>
   </releases>
+  <provides><id>br.com.gualandi.Xjump</id></provides>
+  <replaces><id>br.com.gualandi.Xjump</id></replaces>
 </component>

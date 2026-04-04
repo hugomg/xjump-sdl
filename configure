@@ -1,7 +1,7 @@
 #!/bin/sh
 
 version='3.0.6'
-app_id='br.com.gualandi.Xjump'
+app_id='io.github.hugomg.xjump-sdl'
 
 # Help message
 # ------------
