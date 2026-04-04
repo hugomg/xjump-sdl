@@ -49,14 +49,14 @@ EOF
 # and shell expansion. The GNU conventions expect this behavior so that we can
 # override the installation directories when invoking make.
 
-version='3.0.4'
+version='3.0.5'
+appname='br.com.gualandi.Xjump'
 
 # shellcheck disable=SC2016
 {
     prefix='/usr/local'
     bindir='${prefix}/bin'
     datadir='${prefix}/share'
-    appname='br.com.gualandi.Xjump'
     othervars=
 }
 
