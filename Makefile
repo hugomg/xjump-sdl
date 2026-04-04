@@ -32,21 +32,21 @@ install:
 	$(INSTALL_DATA) -D data/themes/ion.bmp       $(DESTDIR)$(datadir)/xjump/themes/ion.bmp
 	$(INSTALL_DATA) -D data/themes/jumpnbump.bmp $(DESTDIR)$(datadir)/xjump/themes/jumpnbump.bmp
 	$(INSTALL_DATA) -D misc/xjump.6.gz           $(DESTDIR)$(datadir)/man/man6/xjump.6.gz
-	$(INSTALL_DATA) -D misc/icon32.png           $(DESTDIR)$(datadir)/icons/hicolor/32x32/apps/$(appname).png
-	$(INSTALL_DATA) -D misc/icon64.png           $(DESTDIR)$(datadir)/icons/hicolor/64x64/apps/$(appname).png
-	$(INSTALL_DATA) -D misc/icon128.png          $(DESTDIR)$(datadir)/icons/hicolor/128x128/apps/$(appname).png
-	$(INSTALL_DATA) -D misc/xjump.desktop      $(DESTDIR)$(datadir)/applications/$(appname).desktop
-	$(INSTALL_DATA) -D misc/xjump.metainfo.xml $(DESTDIR)$(datadir)/metainfo/$(appname).metainfo.xml
+	$(INSTALL_DATA) -D misc/icon32.png           $(DESTDIR)$(datadir)/icons/hicolor/32x32/apps/$(app_id).png
+	$(INSTALL_DATA) -D misc/icon64.png           $(DESTDIR)$(datadir)/icons/hicolor/64x64/apps/$(app_id).png
+	$(INSTALL_DATA) -D misc/icon128.png          $(DESTDIR)$(datadir)/icons/hicolor/128x128/apps/$(app_id).png
+	$(INSTALL_DATA) -D misc/xjump.desktop      $(DESTDIR)$(datadir)/applications/$(app_id).desktop
+	$(INSTALL_DATA) -D misc/xjump.metainfo.xml $(DESTDIR)$(datadir)/metainfo/$(app_id).metainfo.xml
 
 uninstall:
 	rm -rf $(DESTDIR)$(bindir)/xjump
 	rm -rf $(DESTDIR)$(datadir)/xjump
 	rm -rf $(DESTDIR)$(datadir)/man/man6/xjump.6.gz
-	rm -rf $(DESTDIR)$(datadir)/icons/hicolor/32x32/apps/$(appname).png
-	rm -rf $(DESTDIR)$(datadir)/icons/hicolor/64x64/apps/$(appname).png
-	rm -rf $(DESTDIR)$(datadir)/icons/hicolor/128x128/apps/$(appname).png
-	rm -rf $(DESTDIR)$(datadir)/applications/$(appname).desktop
-	rm -rf $(DESTDIR)$(datadir)/metainfo/$(appname).metainfo.xml
+	rm -rf $(DESTDIR)$(datadir)/icons/hicolor/32x32/apps/$(app_id).png
+	rm -rf $(DESTDIR)$(datadir)/icons/hicolor/64x64/apps/$(app_id).png
+	rm -rf $(DESTDIR)$(datadir)/icons/hicolor/128x128/apps/$(app_id).png
+	rm -rf $(DESTDIR)$(datadir)/applications/$(app_id).desktop
+	rm -rf $(DESTDIR)$(datadir)/metainfo/$(app_id).metainfo.xml
 
 .PHONY: all clean distclean install uninstall
 
@@ -69,7 +69,7 @@ config.h: config.mk
 	@echo '#define XJUMP_PREFIX  "$(prefix)"'  >> $@
 	@echo '#define XJUMP_BINDIR  "$(bindir)"'  >> $@
 	@echo '#define XJUMP_DATADIR "$(datadir)"' >> $@
-	@echo '#define XJUMP_APPNAME "$(appname)"' >> $@
+	@echo '#define XJUMP_APP_ID  "$(app_id)"' >> $@
 	@printf " done\n"
 
 config.mk:

@@ -1,5 +1,8 @@
 #!/bin/sh
 
+version='3.0.6'
+app_id='br.com.gualandi.Xjump'
+
 # Help message
 # ------------
 # The command line flags for this congfigure script are inspired by the GNU
@@ -48,9 +51,6 @@ EOF
 # will pass the "$vars" as-is to the makefile, which will in turn perform macro
 # and shell expansion. The GNU conventions expect this behavior so that we can
 # override the installation directories when invoking make.
-
-version='3.0.6'
-appname='br.com.gualandi.Xjump'
 
 # shellcheck disable=SC2016
 {
@@ -193,7 +193,7 @@ version = $version
 prefix  = $prefix
 bindir  = $bindir
 datadir = $datadir
-appname = $appname
+app_id  = $app_id
 SDL_CFLAGS = $SDL_CFLAGS
 SDL_LIBS   = $SDL_LIBS
 EOF
