@@ -27,6 +27,10 @@
   <url type="vcs-browser">https://github.com/hugomg/xjump-sdl</url>
   <developer id="io.github.hugomg"><name>Hugo Gualandi</name></developer>
   <update_contact>hugo@gualandi.com.br</update_contact>
+  <branding>
+    <color type="primary" scheme_preference="light">#006cd4</color>
+    <color type="primary" scheme_preference="dark">#aedbe7</color>
+  </branding>
   <content_rating type="oars-1.1" />
   <screenshots>
     <screenshot type="default">
