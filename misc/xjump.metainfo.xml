@@ -42,6 +42,11 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="3.0.7" date="2026-04-24">
+        <description>
+            <p>Nicer application icon</p>
+        </description>
+    </release>
     <release version="3.0.6" date="2026-04-04">
         <description>
             <p>Rename app ID following Flathub convention</p>

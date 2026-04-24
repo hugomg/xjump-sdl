@@ -1,6 +1,6 @@
 #!/bin/sh
 
-version='3.0.7-beta'
+version='3.0.7'
 app_id='io.github.hugomg.xjump-sdl'
 
 # Help message
