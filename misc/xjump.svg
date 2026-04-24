@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg height="128px" viewBox="0 0 128 128" width="128px" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <defs>
+        <filter id="a" height="100%" width="100%" x="0%" y="0%">
+            <feColorMatrix color-interpolation-filters="sRGB" values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 -1 1"/>
+        </filter>
+        <filter id="b" height="100%" width="100%" x="0%" y="0%">
+            <feImage height="153.6" result="source" width="153.6" xlink:href="#f"/>
+            <feImage height="153.6" result="destination" width="153.6" xlink:href="#g"/>
+            <feComposite color-interpolation-filters="sRGB" in="source" in2="destination" k1="0" k2="1" k3="1" k4="0" operator="arithmetic"/>
+        </filter>
+        <g id="c" transform="matrix(1 0 0 1 12.8 12.8)">
+            <rect fill="none" height="153.6" width="153.6" x="-12.8" y="-12.8"/>
+            <g clip-path="url(#h)">
+                <rect fill="#ffffff" height="153.6" width="153.6" x="-12.8" y="-12.8"/>
+            </g>
+        </g>
+        <mask id="d">
+            <use xlink:href="#c"/>
+        </mask>
+        <mask id="e">
+            <use filter="url(#a)" xlink:href="#c"/>
+        </mask>
+        <g id="f" mask="url(#d)">
+            <image height="334" transform="matrix(0.24 0 0 0.24 36.8 36.8)" width="334" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAU4AAAFOCAIAAABmMWM+AAAABmJLR0QA/wD/AP+gvaeTAAAFs0lEQVR4nO3dwY3USACG0fHSIgey4MgmQChIXEhgTxyIYUJaiRNZbA4IxN721vZqSkXZ/b13bUZ4pv2pLr/s7eOXb0/Ao/tj9QUAv4PUIUHqkCB1SJA6JEgdEqQOCVKHBKlDgtQhQeqQIHVIkDokSB0SpA4JUocEqUOC1CFB6pAgdUiQOiRIHRKkDglShwSpQ4LUIUHqkCB1SJA6JEgdEm6rL4CXeP7r7epLuMtrvM/JqQ4JUocEqUOC1CFB6pAgdUiQOiRIHRKkDglSh4TNjHGJMy9b13JDTuJUhwSpQ4LUIUHqkCB1SJA6JEgdEqQOCVKHBGu5WezhZnC7vphTHRKkDglShwSpQ4LUIUHqkCB1SJA6JEgdEqQOCYaxL2T3ek7u53uc6pAgdUiQOiRIHRKkDglShwSpQ4LUIUHqkHBbfQGczq9//l59CXdtb/5cfQlX5VSHBKlDgtQhQeqQIHVIkDokSB0SpA4JUocEa7m7rvv0uDPP3QYd/mrbm71vrfzkOac6JEgdEqQOCVKHBKlDgtQhQeqQIHVIkDokSB0SDGMv6YGnr0ziVIcEqUOC1CFB6pAgdUiQOiRIHRKkDglShwRruTO69Bhu8L3Il/7dz8ypDglShwSpQ4LUIUHqkCB1SJA6JEgdEqQOCVKHBMPYNcw/+c2c6pAgdUiQOiRIHRKkDglShwSpQ4LUIUHqkGAtN0t2D5f9xU/OqQ4JUocEqUOC1CFB6pAgdUiQOiRIHRKkDgnWclzJ4BudBz3/9Xbh/z7i3ftPTnVIkDokSB0SpA4JUocEqUOC1CFB6pAgdUiQOiQYxt718cu3nU+vu5F8bFO/tV8jPzzZdvQPnOqQIHVIkDokSB0SpA4JUocEqUOC1CFB6pCw2YQt4c3E90x9UOSZ5277Dsdw+yE/OdUhQuqQIHVIkDokSB0SpA4JUocEqUOC1CFB6pCwvbq9/vnj+72PrzskPLnDneO+M+9qB5et2Vtu/5Y43L0ecqpDgtQhQeqQIHVIkDokSB0SpA4JUocEqUOCtdwlDY7tpsreM4Nfyvgebp9THRKkDglShwSpQ4LUIUHqkCB1SJA6JEgdEm4fPn/d+Xgbe+lydjg1mz/sErMf/zaVUx0SpA4JUocEqUOC1CFB6pAgdUiQOiRIHRKkDgm3/Y8Ht352tVzI4XMgTz593edUhwSpQ4LUIUHqkCB1SJA6JEgdEqQOCVKHhIO13KC1Y7t9pngPaeTNx5cewx1yqkOC1CFB6pAgdUiQOiRIHRKkDglShwSpQ4LUIWHuMHbQ1KHi1NUtqzz2uHWEUx0SpA4JUocEqUOC1CFB6pAgdUiQOiRIHRJOvZZbzIMmL+h5WzaCPPlQz6kOCVKHBKlDgtQhQeqQIHVIkDokSB0SpA4JUoeEUw9jn6c+6dHu9SGt+1oPN7lrl7NOdUiQOiRIHRKkDglShwSpQ4LUIUHqkCB1SJi7lhuduxm0cSFHt+v+nG72ls6pDglShwSpQ4LUIUHqkCB1SJA6JEgdEqQOCaNruYM9nLkb/Gc3h9lbOqc6JEgdEqQOCVKHBKlDgtQhQeqQIHVIkDokSB0SDoaxx8+BNH1dYlt9ATvcEi8zMJt9+h/LWac6JEgdEqQOCVKHBKlDgtQhQeqQIHVIkDokbK9ur3/++H738wdePp15cHZk9gt6R4y+aXuhS9/tu/fzu/efnOqQIHVIkDokSB0SpA4JUocEqUOC1CFB6pAgdUi4ffj8defjw4fXXdeZt6WXdt0/7OK7ffIs16kOCVKHBKlDgtQhQeqQIHVIkDokSB0SpA4J23W3TfBIBh+/6aXLwNOT1CFC6pAgdUiQOiRIHRKkDglShwSpQ4K1HCQ41SFB6pAgdUiQOiRIHRKkDglShwSpQ4LUIUHqkCB1SJA6JEgdEqQOCVKHBKlDgtQhQeqQIHVIkDokSB0S/gVnt5vEjWz6wgAAAABJRU5ErkJggg=="/>
+        </g>
+        <g id="g" mask="url(#e)">
+            <path d="m 124.5 64 c 0 33.125 -26.957031 59.984375 -60.21875 60 c -33.265625 0.015625 -60.246094 -26.816406 -60.28125 -59.941406 s 26.898438 -60.007813 60.160156 -60.058594 c 33.265625 -0.050781 60.273438 26.753906 60.339844 59.878906" fill="#6985d0" transform="matrix(1 0 0 1 12.8 12.8)"/>
+        </g>
+        <clipPath id="h">
+            <path d="m 24 24 h 80 v 80 h -80 z m 0 0"/>
+        </clipPath>
+    </defs>
+    <g filter="url(#b)" transform="matrix(1 0 0 1 -12.8 -12.8)">
+        <rect height="153.6" width="153.6"/>
+    </g>
+</svg>
