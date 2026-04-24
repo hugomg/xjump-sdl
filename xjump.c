@@ -1,6 +1,6 @@
 // Copyright 1997-1999 Tatsuya Kudoh
 // Copyright 1997-1999 Masato Taruishi
-// Copyright 2015-2021 Hugo Gualandi
+// Copyright 2015-2026 Hugo Gualandi
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -1277,10 +1277,42 @@ int main(int argc, char **argv)
                     interpScroll = sy - hy;
                 }
 
+
+                // Left wall
+                {
+                    const SDL_Rect src_rect = { 0, 0, S, backgroundH };
+                    const SDL_Rect dst_rect = {
+                        src_rect.x + gameX,
+                        src_rect.y + gameY - S*FIELD_EXTRA + interpScroll,
+                        src_rect.w,
+                        src_rect.h
+                    };
+                    SDL_RenderCopy(renderer, gameBackground, &src_rect, &dst_rect);
+                }
+
                 // Background
-                const SDL_Rect backgroundSrc = { 0, 0, backgroundW, backgroundH };
-                const SDL_Rect backgroundDst = { gameX, gameY - S*FIELD_EXTRA + interpScroll, backgroundW, backgroundH };
-                SDL_RenderCopy(renderer, gameBackground, &backgroundSrc, &backgroundDst);
+                {
+                    const SDL_Rect src_rect = { S, 0, backgroundW-2*S, backgroundH };
+                    const SDL_Rect dst_rect = {
+                        src_rect.x + gameX,
+                        src_rect.y + gameY - S*FIELD_EXTRA, // No scroll (causes flicker on classic theme)
+                        src_rect.w,
+                        src_rect.h
+                    };
+                    SDL_RenderCopy(renderer, gameBackground, &src_rect, &dst_rect);
+                }
+
+                // Right wall
+                {
+                    const SDL_Rect src_rect = { backgroundW-S, 0, S, backgroundH };
+                    const SDL_Rect dst_rect = {
+                        src_rect.x + gameX,
+                        src_rect.y + gameY - S*FIELD_EXTRA + interpScroll,
+                        src_rect.w,
+                        src_rect.h
+                    };
+                    SDL_RenderCopy(renderer, gameBackground, &src_rect, &dst_rect);
+                }
 
                 // Floors
                 for (int y = -FIELD_EXTRA; y < FIELD_H; y++) {
