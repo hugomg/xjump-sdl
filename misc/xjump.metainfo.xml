@@ -34,8 +34,12 @@
   <content_rating type="oars-1.1" />
   <screenshots>
     <screenshot type="default">
-      <image>https://github.com/hugomg/xjump-sdl/raw/main/misc/screenshot.jpg</image>
-      <caption>Xjump gameplay</caption>
+      <image>https://github.com/hugomg/xjump-sdl/raw/main/misc/screenshot-1.png</image>
+      <caption>Default theme</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://github.com/hugomg/xjump-sdl/raw/main/misc/screenshot-2.png</image>
+      <caption>Classic theme</caption>
     </screenshot>
   </screenshots>
   <releases>
