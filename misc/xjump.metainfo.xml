@@ -16,9 +16,8 @@
       so you have to keep on jumping!
     </p>
     <p>
-      This version of Xjump is a re-implementation using SDL instead of Xlib.
-      It features smoother animations (60 FPS with smooth scrolling)
-      and is more compatible with modern graphical systems.
+      This is a reimplementation of the original Xjump.
+      The scrolling animations are smoother and the game is easier to install in modern systems.
    </p>
   </description>
   <launchable type="desktop-id">io.github.hugomg.xjump-sdl.desktop</launchable>
