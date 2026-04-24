@@ -5,7 +5,7 @@ In a post-Wayland world, the old implementation was growing increasingly
 obsolete and harder to compile on modern systems.
 
 <div align="center">
-    <img alt="A screenshot of Xjump gameplay" src="misc/screenshot.jpg" />
+    <img alt="A screenshot of Xjump gameplay" src="misc/screenshot-1.png" />
 </div>
 
 ## New features and improvements
