@@ -2,8 +2,9 @@
 Version=1.0
 Type=Application
 Name=XJump
-Comment=A jumping game for modern graphical systems
+Comment=Falling platforms game
 Exec=xjump
 Icon=io.github.hugomg.xjump-sdl
 Terminal=false
-Categories=Game;ArcadeGame;
+Categories=Game;ArcadeGame;ActionGame
+Keywords=game;action;platform;
